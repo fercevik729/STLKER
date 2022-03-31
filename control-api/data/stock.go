@@ -1,5 +1,7 @@
 package data
 
+// BasicStock is the struct equivalent of the json body returned by
+// Alpha Vantage's Quote Endpoint API method
 type BasicStock struct {
 	Symbol        string `json:"symbol"`
 	Open          string `json:"open"`
