@@ -9,18 +9,36 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fercevik729/STLKER/control-api/data"
+	"github.com/fercevik729/STLKER/control-api/handlers"
+	p "github.com/fercevik729/STLKER/watcher-api/protos"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	l := log.New(os.Stdout, "control-api", log.LstdFlags)
 
+	// Dial gRPC server
+	conn, err := grpc.Dial(":9092", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Println("[ERROR] dialing gRPC server")
+		panic(err)
+	}
+	defer conn.Close()
+	// Create watcher client
+	wc := p.NewWatcherClient(conn)
+	// Create stock prices database instance
+	spdb := data.NewStockPricesDB(wc, l)
 	// Create serve mux
 	sm := mux.NewRouter()
+	// Create handlers
+	control := handlers.NewControlHandler(l, spdb)
 
-	// Create handlers and any middleware
-
+	// Register handlers
+	sm.HandleFunc("/", control.MoreInfo)
 	// CORS for Vuejs UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
 

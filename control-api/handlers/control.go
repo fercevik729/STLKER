@@ -3,23 +3,23 @@ package handlers
 import (
 	"log"
 	"net/http"
+
+	"github.com/fercevik729/STLKER/control-api/data"
 )
 
 // ControlHandler is a http.Handler
 type ControlHandler struct {
-	l *log.Logger
+	l   *log.Logger
+	sdb *data.StockPricesDB
 }
 
 // NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger) *ControlHandler {
+func NewControlHandler(log *log.Logger, s *data.StockPricesDB) *ControlHandler {
 	return &ControlHandler{
-		l: log,
+		l:   log,
+		sdb: s,
 	}
 }
 
-// MoreInfo
 func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
-
-	// Get the stock ticker info from the URI
-	
 }
