@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -53,6 +54,7 @@ func (s *StockPrices) MonitorStocks(dur time.Duration) <-chan struct{} {
 
 // GetInfo sends HTTP requests to the Alpha Vantage API to get stock info for the specified ticker
 func (sp *StockPrices) GetInfo(ticker string) *Stock {
+	sp.l.Println("[INFO] Handle GetInfo for ticker:", ticker)
 	// Load the api key
 	keyfile := "../key.txt"
 	key, err := LoadKey(keyfile)
@@ -60,7 +62,8 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 		sp.l.Println("[ERROR] Couldn't open key file at", keyfile)
 	}
 	// Get the new stock price from Alpha Vantage
-	resp, err := http.Get("https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + ticker + "&apikey=" + key)
+	url := "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + ticker + "&apikey=" + key
+	resp, err := http.Get(url)
 	if err != nil {
 		sp.l.Println("[ERROR] Could not reach the url")
 		return nil
@@ -77,5 +80,6 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 		return nil
 	}
 
+	fmt.Printf("%#v", bs)
 	return bs
 }

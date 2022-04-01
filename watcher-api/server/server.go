@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -54,7 +56,7 @@ func (w *Watcher) SubscribeTicker(src protos.Watcher_SubscribeTickerServer) erro
 	}
 }
 
-func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) *protos.TickerResponse {
+func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.TickerResponse, error) {
 	s := w.stockPrices.GetInfo(tr.Ticker)
 	return &protos.TickerResponse{
 		Symbol:        s.Symbol,
@@ -65,7 +67,7 @@ func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) *protos
 		Volume:        s.Volume,
 		PrevClose:     s.PrevClose,
 		PercentChange: s.PercentChange,
-	}
+	}, nil
 }
 
 func (w *Watcher) handleUpdates() {
@@ -90,7 +92,11 @@ func (w *Watcher) handleUpdates() {
 				destC := tr.Destinatation.String()
 
 				// Convert the price
-				convPrice := convert(price, destC)
+				convPrice, err := convert(price, destC)
+				if err != nil {
+					w.l.Println("[ERROR] Couldn't convert the price to the destination currency, err:", err)
+				}
+				// Send the Price response back to the correct client
 				err = k.Send(&protos.PriceResponse{StockPrice: convPrice})
 				if err != nil {
 					w.l.Println("[ERROR] Couldn't send the ticker response to the client")
@@ -101,8 +107,40 @@ func (w *Watcher) handleUpdates() {
 
 }
 
-func convert(original float64, dest string) float64 {
+type ExchangeRate struct {
+	Rate string `json:"Exchange Rate"`
+}
 
-	// TODO: query the FOREX exchange endpoint from the Alpha Vantage API
-	return 0
+func convert(original float64, dest string) (float64, error) {
+
+	// Load the API key
+	key, err := data.LoadKey("../key.txt")
+	if err != nil {
+		return -1, err
+	}
+	// Send a request to the Alpha Vantage API
+	resp, err := http.Get("https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=" + dest + "&apikey=" + key)
+	if err != nil {
+		return -1, err
+	}
+	// Check for errors and expected status code
+	if resp.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("expected status code 200, got %d", resp.StatusCode)
+	}
+	// Convert the JSON body to a ExchangeRate struct
+	er := &ExchangeRate{}
+	err = data.FromJSON(er, resp.Body)
+	if err != nil {
+		return -1, err
+	}
+
+	// Convert the rate to a float
+	newRate, err := strconv.ParseFloat(er.Rate, 64)
+	if err != nil {
+		return -1, err
+	}
+	// Return the stock price in the destination currency
+	newPrice := newRate * original
+
+	return newPrice, nil
 }
