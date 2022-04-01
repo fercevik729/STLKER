@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
 	"os"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
@@ -15,20 +12,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func testing() {
-	// TODO: fix Stock struct's struct tags for JSON response body
-	url := "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + "SPY" + "&apikey=" + "ECI3WFKP22I15OFC"
-	resp, _ := http.Get(url)
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	fmt.Println(b)
-
-}
-
 func main() {
-	testing()
 	// Initialize the gRPC server instance
 	l := log.New(os.Stdout, "watcher-api", log.LstdFlags)
 	sp := data.NewStockPrices(l)

@@ -9,7 +9,7 @@ service Watcher {
 
 message TickerRequest {
     string Ticker = 1;
-    Currencies Destinatation = 2;
+    Currencies Destination = 2;
     
 }
 
@@ -20,13 +20,16 @@ message TickerResponse {
 	string Low = 4;
 	string Price = 5;
 	string Volume = 6;
-	string PrevClose = 7;
-	string Change = 8;
-	string PercentChange = 9;
+    string LTD = 7;
+	string PrevClose = 8;
+	string Change = 9;
+	string PercentChange = 10;
 }
 
 message PriceResponse {
-    double StockPrice = 1;
+    string Ticker = 1;
+    double StockPrice = 2;
+    string Currency = 3;
 }
 
 // Currencies is the enum which represents the allowed currencies for the API

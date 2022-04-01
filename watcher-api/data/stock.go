@@ -1,5 +1,9 @@
 package data
 
+type GlobalQuote struct {
+	StockData Stock `json:"Global Quote"`
+}
+
 // BasicStock is the struct equivalent of the json body returned by
 // Alpha Vantage's Quote Endpoint API method
 type Stock struct {
@@ -9,6 +13,7 @@ type Stock struct {
 	Low           string `json:"04. low"`
 	Price         string `json:"05. price"`
 	Volume        string `json:"06. volume"`
+	LTD           string `json:"07. latest trading day"`
 	PrevClose     string `json:"08. previous close"`
 	Change        string `json:"09. change"`
 	PercentChange string `json:"10. change percent"`

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -36,8 +35,8 @@ func (s *StockPrices) MonitorStocks(dur time.Duration) <-chan struct{} {
 				stock := s.GetInfo(k)
 				p, err := strconv.ParseFloat(stock.Price, 64)
 				if err != nil {
-					// Shouldn't happen
-					s.l.Println("[ERROR] Couldn't parse the stock price")
+					// Only occurs if ticker is invalid
+					s.l.Println("[ERROR] Couldn't parse the stock price for ticker:", k)
 				}
 
 				// Update the price if it is different
@@ -72,14 +71,13 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 	if resp.StatusCode != http.StatusOK {
 		sp.l.Printf("[ERROR] expected http status code 200 got %d", resp.StatusCode)
 	}
-	// Deconstruct JSON response body to a BasicStock then compare
-	bs := &Stock{}
-	err = FromJSON(bs, resp.Body)
+	// Deconstruct JSON response body to a GlobalQuote then compare
+	gq := &GlobalQuote{}
+	err = FromJSON(gq, resp.Body)
 	if err != nil {
 		sp.l.Println("[ERROR] Could not decode the response body")
 		return nil
 	}
 
-	fmt.Printf("%#v", bs)
-	return bs
+	return &gq.StockData
 }
