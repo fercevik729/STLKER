@@ -54,7 +54,7 @@ func (c *watcherClient) SubscribeTicker(ctx context.Context, opts ...grpc.CallOp
 
 type Watcher_SubscribeTickerClient interface {
 	Send(*TickerRequest) error
-	Recv() (*TickerResponse, error)
+	Recv() (*PriceResponse, error)
 	grpc.ClientStream
 }
 
@@ -66,8 +66,8 @@ func (x *watcherSubscribeTickerClient) Send(m *TickerRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *watcherSubscribeTickerClient) Recv() (*TickerResponse, error) {
-	m := new(TickerResponse)
+func (x *watcherSubscribeTickerClient) Recv() (*PriceResponse, error) {
+	m := new(PriceResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func _Watcher_SubscribeTicker_Handler(srv interface{}, stream grpc.ServerStream)
 }
 
 type Watcher_SubscribeTickerServer interface {
-	Send(*TickerResponse) error
+	Send(*PriceResponse) error
 	Recv() (*TickerRequest, error)
 	grpc.ServerStream
 }
@@ -138,7 +138,7 @@ type watcherSubscribeTickerServer struct {
 	grpc.ServerStream
 }
 
-func (x *watcherSubscribeTickerServer) Send(m *TickerResponse) error {
+func (x *watcherSubscribeTickerServer) Send(m *PriceResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 

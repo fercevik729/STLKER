@@ -13,7 +13,3 @@ type Stock struct {
 	Change        string `json:"change"`
 	PercentChange string `json:"change percent"`
 }
-
-type BasicStock struct {
-	Price float64 `json:"price"`
-}
