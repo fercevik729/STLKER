@@ -2,7 +2,7 @@ package data
 
 // BasicStock is the struct equivalent of the json body returned by
 // Alpha Vantage's Quote Endpoint API method
-type BasicStock struct {
+type Stock struct {
 	Symbol        string `json:"symbol"`
 	Open          string `json:"open"`
 	High          string `json:"high"`
@@ -12,4 +12,8 @@ type BasicStock struct {
 	PrevClose     string `json:"previous close"`
 	Change        string `json:"change"`
 	PercentChange string `json:"change percent"`
+}
+
+type BasicStock struct {
+	Price float64 `json:"price"`
 }

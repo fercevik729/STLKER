@@ -3,13 +3,54 @@ syntax = "proto3";
 option go_package = "github.com/fercevik729/STLKER/watcher-api/protos";
 
 service Watcher {
+    rpc GetInfo(TickerRequest) returns (TickerResponse);
     rpc SubscribeTicker(stream TickerRequest) returns (stream TickerResponse);
 }
 
 message TickerRequest {
     string Ticker = 1;
+    Currencies Destinatation = 2;
+    
 }
 
 message TickerResponse {
     float StockPrice = 1;
+}
+
+// Currencies is the enum which represents the allowed currencies for the API
+// USD is the default currency
+enum Currencies {
+  USD=0;
+  EUR=1;
+  JPY=2;
+  BGN=3;
+  CZK=4;
+  DKK=5;
+  GBP=6;
+  HUF=7;
+  PLN=8;
+  RON=9;
+  SEK=10;
+  CHF=11;
+  ISK=12;
+  NOK=13;
+  HRK=14;
+  RUB=15;
+  TRY=16;
+  AUD=17;
+  BRL=18;
+  CAD=19;
+  CNY=20;
+  HKD=21;
+  IDR=22;
+  ILS=23;
+  INR=24;
+  KRW=25;
+  MXN=26;
+  MYR=27;
+  NZD=28;
+  PHP=29;
+  SGD=30;
+  THB=31;
+  ZAR=32;
 }
