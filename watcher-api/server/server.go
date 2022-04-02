@@ -13,15 +13,15 @@ import (
 	"github.com/fercevik729/STLKER/watcher-api/protos"
 )
 
-type Watcher struct {
+type WatcherServer struct {
 	protos.UnimplementedWatcherServer
 	stockPrices *data.StockPrices
 	l           *log.Logger
 	subs        map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest
 }
 
-func NewWatcher(sp *data.StockPrices, l *log.Logger) *Watcher {
-	w := &Watcher{
+func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
+	w := &WatcherServer{
 		stockPrices: sp,
 		l:           l,
 		subs:        make(map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest),
@@ -32,10 +32,10 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *Watcher {
 }
 
 // SubscribeTicker awaits for TickerRequests from a client and stores them in a map
-func (w *Watcher) SubscribeTicker(src protos.Watcher_SubscribeTickerServer) error {
+func (w *WatcherServer) SubscribeTicker(stream protos.Watcher_SubscribeTickerServer) error {
 	// Handles messages from the client
 	for {
-		tr, err := src.Recv()
+		tr, err := stream.Recv()
 		if err == io.EOF {
 			w.l.Println("[INFO] Client has closed connection")
 			return err
@@ -48,17 +48,17 @@ func (w *Watcher) SubscribeTicker(src protos.Watcher_SubscribeTickerServer) erro
 
 		// Check to see if the client has already subscribed
 		// then append the new ticker request to the slice of ticker requests
-		trs, ok := w.subs[src]
+		trs, ok := w.subs[stream]
 		if !ok {
 			trs = []*protos.TickerRequest{}
 		}
 		trs = append(trs, tr)
-		w.subs[src] = trs
+		w.subs[stream] = trs
 	}
 }
 
 // GetInfo returns a TickerResponse containing the price of the security in USD
-func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.TickerResponse, error) {
+func (w *WatcherServer) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.TickerResponse, error) {
 	s := w.stockPrices.GetInfo(tr.Ticker)
 	return &protos.TickerResponse{
 		Symbol:        s.Symbol,
@@ -74,7 +74,7 @@ func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*proto
 }
 
 // MoreInfo returns a CompanyResponse containing important financial ratios
-func (w *Watcher) MoreInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.CompanyResponse, error) {
+func (w *WatcherServer) MoreInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.CompanyResponse, error) {
 	ms := w.stockPrices.MoreInfo(tr.Ticker)
 	return &protos.CompanyResponse{
 		Ticker:            tr.Ticker,
@@ -97,7 +97,7 @@ func (w *Watcher) MoreInfo(ctx context.Context, tr *protos.TickerRequest) (*prot
 }
 
 // handleUpdates is a helper method that is called to concurrently send the updated prices
-func (w *Watcher) handleUpdates() {
+func (w *WatcherServer) handleUpdates() {
 	su := w.stockPrices.MonitorStocks(60 * time.Second)
 
 	for range su {
@@ -109,7 +109,6 @@ func (w *Watcher) handleUpdates() {
 
 				// Get the stock info
 				stock := w.stockPrices.GetInfo(tr.Ticker)
-				// Get the price in USD
 				// If the stock price is nonexistent this means that the ticker was faulty and the program will
 				// attempt to remove it from the slice associated with the client
 				if stock == nil {
@@ -118,6 +117,7 @@ func (w *Watcher) handleUpdates() {
 					w.subs[k] = append(w.subs[k][:i], w.subs[k][i+1:]...)
 					continue
 				}
+				// Get the price in USD
 				price, err := strconv.ParseFloat(stock.Price, 64)
 				if err != nil {
 					w.l.Println("[ERROR] couldn't parse the stock price")
@@ -139,6 +139,7 @@ func (w *Watcher) handleUpdates() {
 					delete(w.subs, k)
 				}
 			}
+			// End subscriptions if markets are closed
 			if data.MarketsClosed(time.Now()) {
 				w.l.Println("[WARNING] Subscriptions will be terminated")
 				// Clear stock prices cache
@@ -160,6 +161,7 @@ type ExchangeRate struct {
 	Rate string `json:"5. Exchange Rate"`
 }
 
+// convert calls the AV's FOREX endpoint and converts the original stock price as needed
 func convert(original float64, dest string) (float64, error) {
 	// If a destination currency is USD simply return the original stock price, which was already in USD
 	if dest == "USD" {

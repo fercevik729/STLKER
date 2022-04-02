@@ -19,6 +19,8 @@ type Stock struct {
 	PercentChange string `json:"10. change percent"`
 }
 
+// MoreStock contains important financial metrics returned by AV's
+// Company Overview endpoint
 type MoreStock struct {
 	Ticker            string `json:"Symbol"`
 	Name              string `json:"Name"`
