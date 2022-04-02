@@ -73,6 +73,29 @@ func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*proto
 	}, nil
 }
 
+// MoreInfo returns a CompanyResponse containing important financial ratios
+func (w *Watcher) MoreInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.CompanyResponse, error) {
+	ms := w.stockPrices.MoreInfo(tr.Ticker)
+	return &protos.CompanyResponse{
+		Ticker:            tr.Ticker,
+		Name:              ms.Name,
+		Exchange:          ms.Exchange,
+		Sector:            ms.Sector,
+		MarketCap:         ms.MarketCap,
+		PERatio:           ms.PERatio,
+		PEGRatio:          ms.PEGRatio,
+		DivPerShare:       ms.DivPerShare,
+		EPS:               ms.EPS,
+		RevPerShare:       ms.RevPerShare,
+		ProfitMargin:      ms.ProfitMargin,
+		YearHigh:          ms.YearHigh,
+		YearLow:           ms.YearLow,
+		SharesOutstanding: ms.SharesOutstanding,
+		PriceToBookRatio:  ms.PriceToBookRatio,
+		Beta:              ms.Beta,
+	}, nil
+}
+
 // handleUpdates is a helper method that is called to concurrently send the updated prices
 func (w *Watcher) handleUpdates() {
 	su := w.stockPrices.MonitorStocks(60 * time.Second)

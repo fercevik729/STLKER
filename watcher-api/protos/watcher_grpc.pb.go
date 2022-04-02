@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type WatcherClient interface {
 	GetInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerResponse, error)
 	SubscribeTicker(ctx context.Context, opts ...grpc.CallOption) (Watcher_SubscribeTickerClient, error)
+	MoreInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*CompanyResponse, error)
 }
 
 type watcherClient struct {
@@ -74,12 +75,22 @@ func (x *watcherSubscribeTickerClient) Recv() (*PriceResponse, error) {
 	return m, nil
 }
 
+func (c *watcherClient) MoreInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*CompanyResponse, error) {
+	out := new(CompanyResponse)
+	err := c.cc.Invoke(ctx, "/Watcher/MoreInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WatcherServer is the server API for Watcher service.
 // All implementations must embed UnimplementedWatcherServer
 // for forward compatibility
 type WatcherServer interface {
 	GetInfo(context.Context, *TickerRequest) (*TickerResponse, error)
 	SubscribeTicker(Watcher_SubscribeTickerServer) error
+	MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error)
 	mustEmbedUnimplementedWatcherServer()
 }
 
@@ -92,6 +103,9 @@ func (UnimplementedWatcherServer) GetInfo(context.Context, *TickerRequest) (*Tic
 }
 func (UnimplementedWatcherServer) SubscribeTicker(Watcher_SubscribeTickerServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeTicker not implemented")
+}
+func (UnimplementedWatcherServer) MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MoreInfo not implemented")
 }
 func (UnimplementedWatcherServer) mustEmbedUnimplementedWatcherServer() {}
 
@@ -150,6 +164,24 @@ func (x *watcherSubscribeTickerServer) Recv() (*TickerRequest, error) {
 	return m, nil
 }
 
+func _Watcher_MoreInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TickerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WatcherServer).MoreInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Watcher/MoreInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WatcherServer).MoreInfo(ctx, req.(*TickerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Watcher_ServiceDesc is the grpc.ServiceDesc for Watcher service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -160,6 +192,10 @@ var Watcher_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetInfo",
 			Handler:    _Watcher_GetInfo_Handler,
+		},
+		{
+			MethodName: "MoreInfo",
+			Handler:    _Watcher_MoreInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

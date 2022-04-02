@@ -87,6 +87,43 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 	return &gq.StockData
 }
 
+// MoreInfo sends HTTP requests to the Alpha Vantage API to get the company overview for a specified ticker
+func (sp *StockPrices) MoreInfo(ticker string) *MoreStock {
+	sp.l.Println("[INFO] Handle MoreInfo for ticker:", ticker)
+
+	// Warn if markets are closed
+	if MarketsClosed(time.Now()) {
+		sp.l.Println("[WARNING] Markets are closed")
+	}
+	// Load the api key
+	keyfile := "../key.txt"
+	key, err := LoadKey(keyfile)
+	if err != nil {
+		sp.l.Println("[ERROR] Couldn't open key file at", keyfile)
+	}
+	// Get the company overview from Alpha Vantage
+	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + ticker + "&apikey=" + key
+	resp, err := http.Get(url)
+	if err != nil {
+		sp.l.Println("[ERROR] Could not reach the url")
+		return nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		sp.l.Printf("[ERROR] expected http status code 200 got %d", resp.StatusCode)
+	}
+	// Deconstruct JSON response body to a GlobalQuote then compare
+	ms := &MoreStock{}
+	err = FromJSON(ms, resp.Body)
+	if err != nil {
+		sp.l.Println("[ERROR] Could not decode the response body")
+		return nil
+	}
+
+	return ms
+
+}
+
 // MarketsClosed is a helper method that returns true if the markets are closed
 // Currently only supported for US markets
 func MarketsClosed(t time.Time) bool {

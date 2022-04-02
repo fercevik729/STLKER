@@ -4,7 +4,7 @@ type GlobalQuote struct {
 	StockData Stock `json:"Global Quote"`
 }
 
-// BasicStock is the struct equivalent of the json body returned by
+// Stock is the struct equivalent of the json body returned by
 // Alpha Vantage's Quote Endpoint API method
 type Stock struct {
 	Symbol        string `json:"01. symbol"`
@@ -17,4 +17,23 @@ type Stock struct {
 	PrevClose     string `json:"08. previous close"`
 	Change        string `json:"09. change"`
 	PercentChange string `json:"10. change percent"`
+}
+
+type MoreStock struct {
+	Ticker            string `json:"Symbol"`
+	Name              string `json:"Name"`
+	Exchange          string `json:"Exchange"`
+	Sector            string `json:"Sector"`
+	MarketCap         string `json:"MarketCapitalization"`
+	PERatio           string `json:"PERatio"`
+	PEGRatio          string `json:"PEGRatio"`
+	DivPerShare       string `json:"DividendPerShare"`
+	EPS               string `json:"EPS"`
+	RevPerShare       string `json:"RevenuePerShareTTM"`
+	ProfitMargin      string `json:"ProfitMargin"`
+	YearHigh          string `json:"52WeekHigh"`
+	YearLow           string `json:"52WeekLow"`
+	SharesOutstanding string `json:"SharesOutstanding"`
+	PriceToBookRatio  string `json:"PriceToBookRatio"`
+	Beta              string `json:"Beta"`
 }
