@@ -56,7 +56,7 @@ func (s *StockPrices) MonitorStocks(dur time.Duration) <-chan struct{} {
 func (sp *StockPrices) GetInfo(ticker string) *Stock {
 	sp.l.Println("[INFO] Handle GetInfo for ticker:", ticker)
 	// Check if US markets are closed
-	if MarketsClosed() {
+	if MarketsClosed(time.Now()) {
 		sp.l.Println("[WARNING] Markets are closed")
 	}
 	// Load the api key
@@ -88,25 +88,28 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 }
 
 // MarketsClosed is a helper method that returns true if the markets are closed
-func MarketsClosed() bool {
+// Currently only supported for US markets
+func MarketsClosed(t time.Time) bool {
 	loc, err := time.LoadLocation("America/New_York")
 	if err != nil {
 		panic(err)
 	}
 	// Get the eastern datetime
-	eastDatetime := time.Now().In(loc)
+	eastDT := t.In(loc)
 	// Check if day is Saturday or Sunday
-	switch eastDatetime.Weekday() {
+	switch eastDT.Weekday() {
 	case time.Saturday:
 		return true
 	case time.Sunday:
 		return true
 	}
-	// Check if time is after closing hours or before opening hours
-	cY, cM, cD := eastDatetime.Date()
-	format := "15:04:05 MST"
-	openString := "09:30:00 EDT"
-	closeString := "16:00:00 EDT"
+	// Get current timestamp
+	format := "15:04:05"
+	currTime, _ := time.Parse(format, eastDT.Format(format))
+
+	// Get opening and closing times as time values
+	openString := "09:30:00"
+	closeString := "16:00:00"
 
 	// Parse opening and closing hour strings
 	openTime, err := time.Parse(format, openString)
@@ -118,15 +121,11 @@ func MarketsClosed() bool {
 		panic(err)
 	}
 
-	// Add current date to open and closing times
-	closeTime = closeTime.Add(time.Duration(cY)).Add(time.Duration(cM)).Add(time.Duration(cD))
-	openTime = openTime.Add(time.Duration(cY)).Add(time.Duration(cM)).Add(time.Duration(cD))
-
-	// Check if the EDT time is before opening hours, after closing hours,
+	// Check if the current time is before opening hours, after closing hours,
 	// or neither
-	if eastDatetime.Before(openTime) {
+	if currTime.Before(openTime) {
 		return true
-	} else if eastDatetime.After(openTime) {
+	} else if currTime.After(closeTime) {
 		return true
 	}
 	return false

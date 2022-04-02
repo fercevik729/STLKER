@@ -75,8 +75,7 @@ func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*proto
 
 // handleUpdates is a helper method that is called to concurrently send the updated prices
 func (w *Watcher) handleUpdates() {
-	//TODO: fix back to 60 seconds
-	su := w.stockPrices.MonitorStocks(6 * time.Second)
+	su := w.stockPrices.MonitorStocks(60 * time.Second)
 
 	for range su {
 		// Loop over subscribed clients
@@ -117,7 +116,7 @@ func (w *Watcher) handleUpdates() {
 					delete(w.subs, k)
 				}
 			}
-			if data.MarketsClosed() {
+			if data.MarketsClosed(time.Now()) {
 				w.l.Println("[WARNING] Subscriptions will be terminated")
 				// Clear stock prices cache
 				w.stockPrices.Prices = map[string]float64{}
