@@ -33,7 +33,6 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *Watcher {
 
 // SubscribeTicker awaits for TickerRequests from a client and stores them in a map
 func (w *Watcher) SubscribeTicker(src protos.Watcher_SubscribeTickerServer) error {
-	// TODO: check if time is after markets close (for US stocks this is at 5 pm ET)
 	// Handles messages from the client
 	for {
 		tr, err := src.Recv()
@@ -76,21 +75,22 @@ func (w *Watcher) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*proto
 
 // handleUpdates is a helper method that is called to concurrently send the updated prices
 func (w *Watcher) handleUpdates() {
-	su := w.stockPrices.MonitorStocks(60 * time.Second)
+	//TODO: fix back to 60 seconds
+	su := w.stockPrices.MonitorStocks(6 * time.Second)
 
 	for range su {
-		w.l.Println("[INFO] Got updated stock prices")
 		// Loop over subscribed clients
 		for k, stocks := range w.subs {
 			// Loop over subbed stocks
 			for i, tr := range stocks {
+				w.l.Println("[INFO] Got updated stock prices")
 
 				// Get the stock info
 				stock := w.stockPrices.GetInfo(tr.Ticker)
 				// Get the price in USD
 				// If the stock price is nonexistent this means that the ticker was faulty and the program will
 				// attempt to remove it from the slice associated with the client
-				if stock.Price == "" {
+				if stock == nil {
 					w.l.Println("[WARNING] no results for ticker:", tr.Ticker)
 					w.l.Println("[WARNING] removing faulty ticker:", tr.Ticker)
 					w.subs[k] = append(w.subs[k][:i], w.subs[k][i+1:]...)
@@ -112,57 +112,20 @@ func (w *Watcher) handleUpdates() {
 				// Send the PriceResponse back to the correct client
 				err = k.Send(&protos.PriceResponse{Ticker: tr.Ticker, StockPrice: convPrice, Currency: destC})
 				if err != nil {
+					// Client will have closed their connection so their subscriptions should be removed
 					w.l.Println("[ERROR] Couldn't send the ticker response to the client")
+					delete(w.subs, k)
 				}
+			}
+			if data.MarketsClosed() {
+				w.l.Println("[WARNING] Subscriptions will be terminated")
+				// Clear stock prices cache
+				w.stockPrices.Prices = map[string]float64{}
+				// Clear subscriptions
+				w.subs = map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest{}
 			}
 		}
 	}
-
-}
-
-// marketsClosed is a helper method that returns true if the markets are closed
-func marketsClosed() bool {
-	loc, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		panic(err)
-	}
-	// Get the eastern datetime
-	eastDatetime := time.Now().In(loc)
-	// Check if day is Saturday or Sunday
-	switch eastDatetime.Weekday() {
-	case time.Saturday:
-		return true
-	case time.Sunday:
-		return true
-	}
-	// Check if time is after closing hours or before opening hours
-	cY, cM, cD := eastDatetime.Date()
-	format := "15:04:05 MST"
-	openString := "09:30:00 EDT"
-	closeString := "16:00:00 EDT"
-
-	// Parse opening and closing hour strings
-	openTime, err := time.Parse(format, openString)
-	if err != nil {
-		panic(err)
-	}
-	closeTime, err := time.Parse(format, closeString)
-	if err != nil {
-		panic(err)
-	}
-
-	// Add current date to open and closing times
-	closeTime = closeTime.Add(time.Duration(cY)).Add(time.Duration(cM)).Add(time.Duration(cD))
-	openTime = openTime.Add(time.Duration(cY)).Add(time.Duration(cM)).Add(time.Duration(cD))
-
-	// Check if the EDT time is before opening hours, after closing hours,
-	// or neither
-	if eastDatetime.Before(openTime) {
-		return true
-	} else if eastDatetime.After(openTime) {
-		return true
-	}
-	return false
 
 }
 
