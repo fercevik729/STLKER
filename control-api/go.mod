@@ -8,13 +8,13 @@ require (
 )
 
 require (
-	github.com/felixge/httpsnoop v1.0.1 // indirect
-	github.com/fercevik729/STLKER/watcher-api v0.0.0-20220401045332-01e93384123c // indirect
+	github.com/felixge/httpsnoop v1.0.2 // indirect
+	github.com/fercevik729/STLKER/watcher-api v0.0.0-20220402194202-1882e9f3ea5e // direct
 	github.com/golang/protobuf v1.5.2 // indirect
-	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
-	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
-	golang.org/x/text v0.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
-	google.golang.org/grpc v1.45.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	golang.org/x/net v0.0.0-20220401154927-543a649e0bdd // indirect
+	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f // indirect
+	golang.org/x/text v0.3.7 // indirect
+	google.golang.org/genproto v0.0.0-20220401170504-314d38edb7de // indirect
+	google.golang.org/grpc v1.45.0 // direct
+	google.golang.org/protobuf v1.28.0 // indirect
 )
