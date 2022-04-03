@@ -3,58 +3,89 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
 	"github.com/fercevik729/STLKER/watcher-api/protos"
+	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 )
 
 type WatcherServer struct {
-	protos.UnimplementedWatcherServer
+	pb.UnimplementedWatcherServer
 	stockPrices *data.StockPrices
 	l           *log.Logger
-	subs        map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest
 }
 
 func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
 	w := &WatcherServer{
 		stockPrices: sp,
 		l:           l,
-		subs:        make(map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest),
 	}
-	// Create a goroutine to handle any updates
-	go w.handleUpdates()
 	return w
 }
 
-// SubscribeTicker awaits for TickerRequests from a client and stores them in a map
-func (w *WatcherServer) SubscribeTicker(stream protos.Watcher_SubscribeTickerServer) error {
+// SubscribeTicker gathers TickerRequests from a client and stores them in a map it the
+func (w *WatcherServer) SubscribeTicker(tr *pb.TickerRequest, stream pb.Watcher_SubscribeTickerServer) error {
 	// Handles messages from the client
-	for {
-		tr, err := stream.Recv()
-		if err == io.EOF {
-			w.l.Println("[INFO] Client has closed connection")
-			return err
-		}
-		if err != nil {
-			w.l.Println("[ERROR] Unable to read from client, err:", err)
-			return err
-		}
-		w.l.Println("[INFO] Handle SubscribeTicker client request, ticker:", tr.Ticker, "dest currency:", tr.Destination.String())
+	w.l.Println("[INFO] Handle SubscribeTicker client request, ticker:", tr.Ticker, "dest currency:", tr.Destination.String())
 
-		// Check to see if the client has already subscribed
-		// then append the new ticker request to the slice of ticker requests
-		trs, ok := w.subs[stream]
-		if !ok {
-			trs = []*protos.TickerRequest{}
+	// Create a prices channel to get
+	wg := &sync.WaitGroup{}
+	symbol := tr.Ticker
+
+	// Create a new goroutine to handle
+	wg.Add(1)
+	go func() {
+		ticker := time.NewTicker(15 * time.Second)
+		for range ticker.C {
+			// Handle any errors if service can't get info on the stock
+			w.l.Println("[INFO] Got updated price for ticker:", tr.Ticker)
+			tResp, err := w.GetInfo(context.Background(), tr)
+			if err != nil {
+				w.l.Println("[ERROR] Couldn't get stock info")
+				break
+			}
+			if tResp == nil {
+				w.l.Println("[WARNING] No results for ticker:", tr.Ticker)
+				break
+			}
+			// Get the price in USD
+			price, err := strconv.ParseFloat(tResp.Price, 64)
+			if err != nil {
+				w.l.Println("[ERROR] couldn't parse the stock price")
+				break
+
+			}
+			// Get the price and convert it
+			price, err = convert(price, tr.Destination.String())
+			if err != nil {
+				w.l.Println("[ERROR] Couldn't convert stock price")
+				break
+			}
+			// Add the price response to the channel
+			pr := &pb.PriceResponse{
+				Ticker:     symbol,
+				StockPrice: price,
+				Currency:   tr.Destination.String(),
+			}
+			stream.Send(pr)
+			// If markets are closed close the prices channel
+			w.l.Println(data.MarketsClosed(time.Now()))
+			if data.MarketsClosed(time.Now()) {
+				w.l.Println("[WARNING] markets are closed. Stream will be closed")
+				break
+			}
+
 		}
-		trs = append(trs, tr)
-		w.subs[stream] = trs
-	}
+		wg.Done()
+	}()
+	wg.Wait()
+
+	return nil
 }
 
 // GetInfo returns a TickerResponse containing the price of the security in USD
@@ -94,62 +125,6 @@ func (w *WatcherServer) MoreInfo(ctx context.Context, tr *protos.TickerRequest) 
 		PriceToBookRatio:  ms.PriceToBookRatio,
 		Beta:              ms.Beta,
 	}, nil
-}
-
-// handleUpdates is a helper method that is called to concurrently send the updated prices
-func (w *WatcherServer) handleUpdates() {
-	su := w.stockPrices.MonitorStocks(60 * time.Second)
-
-	for range su {
-		// Loop over subscribed clients
-		for k, stocks := range w.subs {
-			// Loop over subbed stocks
-			for i, tr := range stocks {
-				w.l.Println("[INFO] Got updated stock prices")
-
-				// Get the stock info
-				stock := w.stockPrices.GetInfo(tr.Ticker)
-				// If the stock price is nonexistent this means that the ticker was faulty and the program will
-				// attempt to remove it from the slice associated with the client
-				if stock == nil {
-					w.l.Println("[WARNING] no results for ticker:", tr.Ticker)
-					w.l.Println("[WARNING] removing faulty ticker:", tr.Ticker)
-					w.subs[k] = append(w.subs[k][:i], w.subs[k][i+1:]...)
-					continue
-				}
-				// Get the price in USD
-				price, err := strconv.ParseFloat(stock.Price, 64)
-				if err != nil {
-					w.l.Println("[ERROR] couldn't parse the stock price")
-					continue
-				}
-				// Get the destination currency
-				destC := tr.Destination.String()
-
-				// Convert the price
-				convPrice, err := convert(price, destC)
-				if err != nil {
-					w.l.Println("[ERROR] Couldn't convert the price to the destination currency, err:", err)
-				}
-				// Send the PriceResponse back to the correct client
-				err = k.Send(&protos.PriceResponse{Ticker: tr.Ticker, StockPrice: convPrice, Currency: destC})
-				if err != nil {
-					// Client will have closed their connection so their subscriptions should be removed
-					w.l.Println("[ERROR] Couldn't send the ticker response to the client")
-					delete(w.subs, k)
-				}
-			}
-			// End subscriptions if markets are closed
-			if data.MarketsClosed(time.Now()) {
-				w.l.Println("[WARNING] Subscriptions will be terminated")
-				// Clear stock prices cache
-				w.stockPrices.Prices = map[string]float64{}
-				// Clear subscriptions
-				w.subs = map[protos.Watcher_SubscribeTickerServer][]*protos.TickerRequest{}
-			}
-		}
-	}
-
 }
 
 // ExchangeRates is a struct composed of ExchangeRate

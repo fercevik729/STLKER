@@ -3,7 +3,6 @@ package data
 import (
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -20,36 +19,6 @@ func NewStockPrices(l *log.Logger) *StockPrices {
 		Prices: make(map[string]float64),
 	}
 	return sp
-}
-
-// MonitorStocks checks for updates to the specified stocks' prices
-func (s *StockPrices) MonitorStocks(dur time.Duration) <-chan struct{} {
-	ch := make(chan struct{})
-	go func() {
-		ticker := time.NewTicker(dur)
-
-		for range ticker.C {
-			for k, v := range s.Prices {
-				// Get the stock
-				stock := s.GetInfo(k)
-				p, err := strconv.ParseFloat(stock.Price, 64)
-				if err != nil {
-					// Only occurs if ticker is invalid, delete the faulty ticker
-					s.l.Println("[ERROR] Couldn't parse the stock price for ticker:", k)
-					delete(s.Prices, k)
-					continue
-				}
-
-				// Update the price if it is different
-				if p != v {
-					s.Prices[k] = p
-				}
-			}
-			ch <- struct{}{}
-		}
-	}()
-
-	return ch
 }
 
 // GetInfo sends HTTP requests to the Alpha Vantage API to get stock info for the specified ticker
