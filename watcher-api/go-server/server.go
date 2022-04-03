@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
-	"github.com/fercevik729/STLKER/watcher-api/protos"
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 )
 
@@ -74,7 +73,6 @@ func (w *WatcherServer) SubscribeTicker(tr *pb.TickerRequest, stream pb.Watcher_
 			}
 			stream.Send(pr)
 			// If markets are closed close the prices channel
-			w.l.Println(data.MarketsClosed(time.Now()))
 			if data.MarketsClosed(time.Now()) {
 				w.l.Println("[WARNING] Markets are closed. Closing stream...")
 				break
@@ -89,9 +87,9 @@ func (w *WatcherServer) SubscribeTicker(tr *pb.TickerRequest, stream pb.Watcher_
 }
 
 // GetInfo returns a TickerResponse containing the price of the security in USD
-func (w *WatcherServer) GetInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.TickerResponse, error) {
+func (w *WatcherServer) GetInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.TickerResponse, error) {
 	s := w.stockPrices.GetInfo(tr.Ticker)
-	return &protos.TickerResponse{
+	return &pb.TickerResponse{
 		Symbol:        s.Symbol,
 		Open:          s.Open,
 		High:          s.High,
@@ -105,9 +103,9 @@ func (w *WatcherServer) GetInfo(ctx context.Context, tr *protos.TickerRequest) (
 }
 
 // MoreInfo returns a CompanyResponse containing important financial ratios
-func (w *WatcherServer) MoreInfo(ctx context.Context, tr *protos.TickerRequest) (*protos.CompanyResponse, error) {
+func (w *WatcherServer) MoreInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.CompanyResponse, error) {
 	ms := w.stockPrices.MoreInfo(tr.Ticker)
-	return &protos.CompanyResponse{
+	return &pb.CompanyResponse{
 		Ticker:            tr.Ticker,
 		Name:              ms.Name,
 		Exchange:          ms.Exchange,

@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
+	server "github.com/fercevik729/STLKER/watcher-api/go-server"
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
-	"github.com/fercevik729/STLKER/watcher-api/server"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
