@@ -1,3 +1,5 @@
 .vscode/
 .idea/
+node_modules
+static/build
 key.txt

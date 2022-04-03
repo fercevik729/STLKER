@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"time"
 
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 	"google.golang.org/grpc"
@@ -19,7 +20,9 @@ func main() {
 	defer conn.Close()
 
 	client := pb.NewWatcherClient(conn)
+
 	SubscribeTicker(client)
+	GetInfo(client)
 
 }
 
@@ -43,7 +46,35 @@ func SubscribeTicker(client pb.WatcherClient) {
 			log.Fatalln("Error getting price response:", err)
 		}
 
-		log.Printf("%#v", price)
+		log.Printf("%#v\n", price)
 	}
 	stream.CloseSend()
+}
+
+func GetInfo(client pb.WatcherClient) {
+	tr := &pb.TickerRequest{
+		Ticker:      "SPY",
+		Destination: pb.Currencies_TRY,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	tResp, err := client.GetInfo(ctx, tr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("%#v\n", tResp)
+}
+
+func MoreInfo(client pb.WatcherClient) {
+	tr := &pb.TickerRequest{
+		Ticker:      "SPY",
+		Destination: pb.Currencies_TRY,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cResp, err := client.MoreInfo(ctx, tr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("%#v\n", cResp)
 }

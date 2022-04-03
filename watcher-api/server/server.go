@@ -76,7 +76,7 @@ func (w *WatcherServer) SubscribeTicker(tr *pb.TickerRequest, stream pb.Watcher_
 			// If markets are closed close the prices channel
 			w.l.Println(data.MarketsClosed(time.Now()))
 			if data.MarketsClosed(time.Now()) {
-				w.l.Println("[WARNING] markets are closed. Stream will be closed")
+				w.l.Println("[WARNING] Markets are closed. Closing stream...")
 				break
 			}
 

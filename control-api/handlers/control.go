@@ -45,4 +45,14 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 }
 func (c *ControlHandler) SubscribeTicker(w http.ResponseWriter, r *http.Request) {
 
+	// Get query parameters
+	ticker := r.URL.Query().Get("ticker")
+	destCurr := r.URL.Query().Get("dest")
+
+	ch := make(chan *data.StockPrice)
+	go c.sdb.SubscribeTicker(ticker, destCurr, ch)
+
+	for stock := range ch {
+		data.ToJSON(stock, w)
+	}
 }

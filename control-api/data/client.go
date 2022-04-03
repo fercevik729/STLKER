@@ -3,20 +3,26 @@ package data
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"strconv"
 	"time"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
 	"github.com/fercevik729/STLKER/watcher-api/protos"
+	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 )
 
 type StockClientDB struct {
 	client protos.WatcherClient
 	log    *log.Logger
 	prices map[string]float64
-	sub    protos.Watcher_SubscribeTickerClient
+	sub    pb.Watcher_SubscribeTickerClient
+}
+
+type StockPrice struct {
+	Ticker string  `json:"ticker"`
+	Price  float64 `json:"price"`
+	Dest   string  `json:"dest"`
 }
 
 func NewStockPricesDB(client protos.WatcherClient, l *log.Logger) *StockClientDB {
@@ -30,26 +36,33 @@ func NewStockPricesDB(client protos.WatcherClient, l *log.Logger) *StockClientDB
 	return spdb
 }
 
-func (s *StockClientDB) SubscribeTicker(ticker, destination string) {
-	// TODO: rewrite this to make it compatible with RESTful frontend
-	stream, err := s.client.SubscribeTicker(context.Background())
+// SubscribeTicker returns a read only channel of StockPrice pointers which are then to be converted
+// to JSON
+func (s *StockClientDB) SubscribeTicker(ticker, destination string, stocks chan<- *StockPrice) {
+	in := &pb.TickerRequest{
+		Ticker:      ticker,
+		Destination: pb.Currencies(pb.Currencies_value[destination]),
+	}
+	stream, err := s.client.SubscribeTicker(context.Background(), in)
 	if err != nil {
 		s.log.Println("[ERROR] unable to subscribe for stock prices, error:", err)
 	}
 	waitC := make(chan struct{})
+
 	// Assign sub as the client
 	s.sub = stream
 	go func() {
 		for {
-			// Receive messages from the client
-			pr, err := stream.Recv()
-			if err == io.EOF {
-				close(waitC)
-
+			// Receive messages from the client until EOF is reached
+			// TODO: change SubscribeTicker to be only server-side streaming
+			s.log.Println("[INFO] received updated prices from server for ticker:", in.Ticker, "dest currency:", in.Destination)
+			// Add the stock price to the channel
+			s.client.
+				stocks <- &StockPrice{
+				Ticker: ticker,
+				Price:  pr.StockPrice,
+				Dest:   pr.Currency,
 			}
-			s.log.Println("[INFO] received updatd prices from server for ticker:", pr.Ticker, "dest currency:", pr.Currency)
-			// Store the ticker's price
-			s.prices[pr.Ticker] = pr.StockPrice
 
 			if err != nil {
 				s.log.Println("[ERROR] receiving request from user error:", err)
@@ -63,6 +76,7 @@ func (s *StockClientDB) SubscribeTicker(ticker, destination string) {
 
 }
 
+// GetInfo returns a pointer to a Stock struct and an error if one arises
 func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error) {
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")
@@ -99,6 +113,7 @@ func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error)
 	}, nil
 }
 
+// MoreInfo returns a pointer to a MoreStock struct and an error if one arises
 func (s *StockClientDB) MoreInfo(ticker string) (*data.MoreStock, error) {
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")
