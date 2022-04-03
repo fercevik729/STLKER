@@ -1,5 +1,7 @@
 .vscode/
 .idea/
 node_modules
+package-lock.json
+package.json
 static/build
 key.txt
