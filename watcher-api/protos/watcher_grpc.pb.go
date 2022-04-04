@@ -25,6 +25,7 @@ type WatcherClient interface {
 	GetInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerResponse, error)
 	SubscribeTicker(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (Watcher_SubscribeTickerClient, error)
 	MoreInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*CompanyResponse, error)
+	Echo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerRequest, error)
 }
 
 type watcherClient struct {
@@ -85,6 +86,15 @@ func (c *watcherClient) MoreInfo(ctx context.Context, in *TickerRequest, opts ..
 	return out, nil
 }
 
+func (c *watcherClient) Echo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerRequest, error) {
+	out := new(TickerRequest)
+	err := c.cc.Invoke(ctx, "/Watcher/Echo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WatcherServer is the server API for Watcher service.
 // All implementations must embed UnimplementedWatcherServer
 // for forward compatibility
@@ -92,6 +102,7 @@ type WatcherServer interface {
 	GetInfo(context.Context, *TickerRequest) (*TickerResponse, error)
 	SubscribeTicker(*TickerRequest, Watcher_SubscribeTickerServer) error
 	MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error)
+	Echo(context.Context, *TickerRequest) (*TickerRequest, error)
 	mustEmbedUnimplementedWatcherServer()
 }
 
@@ -107,6 +118,9 @@ func (UnimplementedWatcherServer) SubscribeTicker(*TickerRequest, Watcher_Subscr
 }
 func (UnimplementedWatcherServer) MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MoreInfo not implemented")
+}
+func (UnimplementedWatcherServer) Echo(context.Context, *TickerRequest) (*TickerRequest, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Echo not implemented")
 }
 func (UnimplementedWatcherServer) mustEmbedUnimplementedWatcherServer() {}
 
@@ -178,6 +192,24 @@ func _Watcher_MoreInfo_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Watcher_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TickerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WatcherServer).Echo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Watcher/Echo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WatcherServer).Echo(ctx, req.(*TickerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Watcher_ServiceDesc is the grpc.ServiceDesc for Watcher service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -192,6 +224,10 @@ var Watcher_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MoreInfo",
 			Handler:    _Watcher_MoreInfo_Handler,
+		},
+		{
+			MethodName: "Echo",
+			Handler:    _Watcher_Echo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

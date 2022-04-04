@@ -1,16 +1,18 @@
 import { TickerRequest, TickerResponse, CompanyResponse, PriceResponse } from '../protos/watcher_pb.js';
 import { WatcherClient } from '../protos/watcher_grpc_web_pb.js';
 
-var watcherService = new WatcherClient('http://localhost:8080');
+var watcherService = new WatcherClient('http://'+ window.location.hostname + ':8080',
+                               null, null);
 
 var request = new TickerRequest();
-request.setTicker('SPY')
+request.setTicker('TSLA')
 
-watcherService.getInfo(request, {}, (err, response) => {
+// Unary gRPC call
+watcherService.Echo(request, {}, (err, response) => {
     if(err) {
         console.log(err.code);
         console.log(err.message);
     } else {
-        console.log(response.getPrice());
+        console.log(response.getTicker());
     }
 });

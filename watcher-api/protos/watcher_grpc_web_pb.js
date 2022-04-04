@@ -247,5 +247,66 @@ proto.WatcherPromiseClient.prototype.moreInfo =
 };
 
 
+/**
+ * @const
+ * @type {!grpc.web.MethodDescriptor<
+ *   !proto.TickerRequest,
+ *   !proto.TickerRequest>}
+ */
+const methodDescriptor_Watcher_Echo = new grpc.web.MethodDescriptor(
+  '/Watcher/Echo',
+  grpc.web.MethodType.UNARY,
+  proto.TickerRequest,
+  proto.TickerRequest,
+  /**
+   * @param {!proto.TickerRequest} request
+   * @return {!Uint8Array}
+   */
+  function(request) {
+    return request.serializeBinary();
+  },
+  proto.TickerRequest.deserializeBinary
+);
+
+
+/**
+ * @param {!proto.TickerRequest} request The
+ *     request proto
+ * @param {?Object<string, string>} metadata User defined
+ *     call metadata
+ * @param {function(?grpc.web.RpcError, ?proto.TickerRequest)}
+ *     callback The callback function(error, response)
+ * @return {!grpc.web.ClientReadableStream<!proto.TickerRequest>|undefined}
+ *     The XHR Node Readable Stream
+ */
+proto.WatcherClient.prototype.echo =
+    function(request, metadata, callback) {
+  return this.client_.rpcCall(this.hostname_ +
+      '/Watcher/Echo',
+      request,
+      metadata || {},
+      methodDescriptor_Watcher_Echo,
+      callback);
+};
+
+
+/**
+ * @param {!proto.TickerRequest} request The
+ *     request proto
+ * @param {?Object<string, string>=} metadata User defined
+ *     call metadata
+ * @return {!Promise<!proto.TickerRequest>}
+ *     Promise that resolves to the response
+ */
+proto.WatcherPromiseClient.prototype.echo =
+    function(request, metadata) {
+  return this.client_.unaryCall(this.hostname_ +
+      '/Watcher/Echo',
+      request,
+      metadata || {},
+      methodDescriptor_Watcher_Echo);
+};
+
+
 module.exports = proto;
 

@@ -23,11 +23,11 @@ func main() {
 	reflection.Register(gs)
 
 	// Create tcp socket for incoming connections
-	lis, err := net.Listen("tcp", ":9090")
+	lis, err := net.Listen("tcp", "0.0.0.0:9090")
 	if err != nil {
 		l.Fatal("Unable to listen, err:", err)
 	}
-	l.Println("[DEBUG] gRPC server listening at localhost:9090")
+	l.Println("[DEBUG] gRPC server listening at 0.0.0.0:9090")
 
 	// Listen on grpc server
 	log.Fatal("failed to serve:", gs.Serve(lis))

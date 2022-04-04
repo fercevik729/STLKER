@@ -3,14 +3,15 @@ syntax = "proto3";
 option go_package = "github.com/fercevik729/STLKER/watcher-api/protos";
 
 service Watcher {
-    rpc GetInfo(TickerRequest) returns (TickerResponse);
-    rpc SubscribeTicker(TickerRequest) returns (stream PriceResponse);
-    rpc MoreInfo(TickerRequest) returns (CompanyResponse);
+	rpc GetInfo(TickerRequest) returns (TickerResponse);
+	rpc SubscribeTicker(TickerRequest) returns (stream PriceResponse);
+	rpc MoreInfo(TickerRequest) returns (CompanyResponse);
+	rpc Echo(TickerRequest) returns (TickerRequest);
 }
 
 message TickerRequest {
-    string Ticker = 1;
-    Currencies Destination = 2;
+	string Ticker = 1;
+	Currencies Destination = 2;
     
 }
 
@@ -21,7 +22,7 @@ message TickerResponse {
 	string Low = 4;
 	string Price = 5;
 	string Volume = 6;
-    string LTD = 7;
+    	string LTD = 7;
 	string PrevClose = 8;
 	string Change = 9;
 	string PercentChange = 10;
