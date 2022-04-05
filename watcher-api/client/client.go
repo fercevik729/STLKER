@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"log"
 	"time"
 
@@ -20,36 +19,9 @@ func main() {
 	defer conn.Close()
 
 	client := pb.NewWatcherClient(conn)
-
-	//	SubscribeTicker(client)
 	GetInfo(client)
-	Echo(client)
+	MoreInfo(client)
 
-}
-
-func SubscribeTicker(client pb.WatcherClient) {
-	tr := &pb.TickerRequest{
-		Ticker:      "SPY",
-		Destination: pb.Currencies_TRY,
-	}
-
-	stream, err := client.SubscribeTicker(context.Background(), tr)
-	if err != nil {
-		log.Fatalln("Error subscribing ticker:", err)
-	}
-
-	for {
-		price, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalln("Error getting price response:", err)
-		}
-
-		log.Printf("%#v\n", price)
-	}
-	stream.CloseSend()
 }
 
 func GetInfo(client pb.WatcherClient) {
@@ -78,18 +50,4 @@ func MoreInfo(client pb.WatcherClient) {
 		log.Fatal(err)
 	}
 	log.Printf("%#v\n", cResp)
-}
-
-func Echo(client pb.WatcherClient) {
-	tr := &pb.TickerRequest{
-		Ticker:      "SPY",
-		Destination: pb.Currencies_TRY,
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	resp, err := client.Echo(ctx, tr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(resp.Ticker)
 }

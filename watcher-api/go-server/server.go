@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
-	"time"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
@@ -25,65 +23,6 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
 		l:           l,
 	}
 	return w
-}
-
-// SubscribeTicker gathers TickerRequests from a client and stores them in a map it the
-func (w *WatcherServer) SubscribeTicker(tr *pb.TickerRequest, stream pb.Watcher_SubscribeTickerServer) error {
-	// Handles messages from the client
-	w.l.Println("[INFO] Handle SubscribeTicker client request, ticker:", tr.Ticker, "dest currency:", tr.Destination.String())
-
-	// Create a prices channel to get
-	wg := &sync.WaitGroup{}
-	symbol := tr.Ticker
-
-	// Create a new goroutine to handle
-	wg.Add(1)
-	go func() {
-		ticker := time.NewTicker(15 * time.Second)
-		for range ticker.C {
-			// Handle any errors if service can't get info on the stock
-			w.l.Println("[INFO] Got updated price for ticker:", tr.Ticker)
-			tResp, err := w.GetInfo(context.Background(), tr)
-			if err != nil {
-				w.l.Println("[ERROR] Couldn't get stock info")
-				break
-			}
-			if tResp == nil {
-				w.l.Println("[WARNING] No results for ticker:", tr.Ticker)
-				break
-			}
-			// Get the price in USD
-			price, err := strconv.ParseFloat(tResp.Price, 64)
-			if err != nil {
-				w.l.Println("[ERROR] couldn't parse the stock price")
-				break
-
-			}
-			// Get the price and convert it
-			price, err = convert(price, tr.Destination.String())
-			if err != nil {
-				w.l.Println("[ERROR] Couldn't convert stock price")
-				break
-			}
-			// Add the price response to the channel
-			pr := &pb.PriceResponse{
-				Ticker:     symbol,
-				StockPrice: price,
-				Currency:   tr.Destination.String(),
-			}
-			stream.Send(pr)
-			// If markets are closed close the prices channel
-			if data.MarketsClosed(time.Now()) {
-				w.l.Println("[WARNING] Markets are closed. Closing stream...")
-				break
-			}
-
-		}
-		wg.Done()
-	}()
-	wg.Wait()
-
-	return nil
 }
 
 // GetInfo returns a TickerResponse containing the price of the security in USD
