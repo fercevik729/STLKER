@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	conn, err := grpc.Dial(":9092", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalln("Couldn't connect to gRPC server", err)
 	}
@@ -21,8 +21,9 @@ func main() {
 
 	client := pb.NewWatcherClient(conn)
 
-	SubscribeTicker(client)
+	//	SubscribeTicker(client)
 	GetInfo(client)
+	Echo(client)
 
 }
 
@@ -77,4 +78,18 @@ func MoreInfo(client pb.WatcherClient) {
 		log.Fatal(err)
 	}
 	log.Printf("%#v\n", cResp)
+}
+
+func Echo(client pb.WatcherClient) {
+	tr := &pb.TickerRequest{
+		Ticker:      "SPY",
+		Destination: pb.Currencies_TRY,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	resp, err := client.Echo(ctx, tr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(resp.Ticker)
 }

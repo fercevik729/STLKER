@@ -125,6 +125,11 @@ func (w *WatcherServer) MoreInfo(ctx context.Context, tr *pb.TickerRequest) (*pb
 	}, nil
 }
 
+// Echo returns the request that was passed to it
+func (w *WatcherServer) Echo(ctx context.Context, tr *pb.TickerRequest) (*pb.TickerRequest, error) {
+	return tr, nil
+}
+
 // ExchangeRates is a struct composed of ExchangeRate
 // It is used to unmarshal FOREX JSON data from the Alpha Vantage API
 type ExchangeRates struct {

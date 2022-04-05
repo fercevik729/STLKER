@@ -38,7 +38,7 @@ func main() {
 	}()
 
 	// create gRPC web server with CORS enabled
-	grpcWebServer := grpcweb.WrapServer(gs, grpcweb.WithOriginFunc(func(origin string) bool { return true }))
+	grpcWebServer := grpcweb.WrapServer(gs, grpcweb.WithOriginFunc(func(origin string) bool { return false }))
 
 	l.Println("[DEBUG] http server listening at 0.0.0.0:9091")
 
