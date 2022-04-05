@@ -8,7 +8,7 @@ var request = new TickerRequest();
 request.setTicker('TSLA')
 
 // Unary gRPC call
-watcherService.Echo(request, {}, (err, response) => {
+watcherService.echo(request, {}, (err, response) => {
     if(err) {
         console.log(err.code);
         console.log(err.message);
