@@ -22,7 +22,7 @@ func main() {
 	l := log.New(os.Stdout, "control-api", log.LstdFlags)
 
 	// Dial gRPC server
-	conn, err := grpc.Dial(":9092", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Println("[ERROR] dialing gRPC server")
 		panic(err)
@@ -38,15 +38,10 @@ func main() {
 	control := handlers.NewControlHandler(l, spdb)
 
 	// Register handlers
-	// TODO: add destination currency parameters
-	sm.HandleFunc("/info", control.GetInfo).Queries("ticker", "{ticker:[A-Z]+}")
-	sm.HandleFunc("/moreinfo", control.MoreInfo).Queries("ticker", "{ticker:[A-Z]+}")
-	sm.HandleFunc("/sub", control.SubscribeTicker).Queries("ticker", "{ticker:[A-Z]+}")
-	//sm.Path("/info").Queries("ticker", "{[A-Z]+}", "dest", "{[A-Z]{3}").HandlerFunc(control.GetInfo)
-	//sm.Path("/moreinfo").Queries("ticker", "{[A-Z]+}").HandlerFunc(control.GetInfo)
-	//sm.Path("/sub").Queries("ticker", "{[A-Z]+}", "dest", "{[A-Z]{3}").HandlerFunc(control.SubscribeTicker)
+	sm.HandleFunc("/info", control.GetInfo)
+	sm.HandleFunc("/moreinfo", control.MoreInfo)
 
-	// CORS for Vuejs UI
+	// CORS for  UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
 
 	// Create server

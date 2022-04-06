@@ -36,46 +36,6 @@ func NewStockPricesDB(client protos.WatcherClient, l *log.Logger) *StockClientDB
 	return spdb
 }
 
-// SubscribeTicker returns a read only channel of StockPrice pointers which are then to be converted
-// to JSON
-func (s *StockClientDB) SubscribeTicker(ticker, destination string, stocks chan<- *StockPrice) {
-	in := &pb.TickerRequest{
-		Ticker:      ticker,
-		Destination: pb.Currencies(pb.Currencies_value[destination]),
-	}
-	stream, err := s.client.SubscribeTicker(context.Background(), in)
-	if err != nil {
-		s.log.Println("[ERROR] unable to subscribe for stock prices, error:", err)
-	}
-	waitC := make(chan struct{})
-
-	// Assign sub as the client
-	s.sub = stream
-	go func() {
-		for {
-			// Receive messages from the client until EOF is reached
-			// TODO: change SubscribeTicker to be only server-side streaming
-			s.log.Println("[INFO] received updated prices from server for ticker:", in.Ticker, "dest currency:", in.Destination)
-			// Add the stock price to the channel
-			s.client.
-				stocks <- &StockPrice{
-				Ticker: ticker,
-				Price:  pr.StockPrice,
-				Dest:   pr.Currency,
-			}
-
-			if err != nil {
-				s.log.Println("[ERROR] receiving request from user error:", err)
-			}
-
-		}
-	}()
-
-	<-waitC
-	stream.CloseSend()
-
-}
-
 // GetInfo returns a pointer to a Stock struct and an error if one arises
 func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error) {
 	if len(ticker) > 5 {
@@ -85,6 +45,7 @@ func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error)
 		Ticker:      ticker,
 		Destination: protos.Currencies(protos.Currencies_value[destination]),
 	}
+	s.log.Println("Destination:", destination)
 	// Have the request timeout after 15 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
