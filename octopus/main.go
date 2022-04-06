@@ -9,8 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fercevik729/STLKER/control-api/data"
-	"github.com/fercevik729/STLKER/control-api/handlers"
+	"github.com/fercevik729/STLKER/octopus/handlers"
 	p "github.com/fercevik729/STLKER/watcher-api/protos"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -30,12 +29,10 @@ func main() {
 	defer conn.Close()
 	// Create watcher client
 	wc := p.NewWatcherClient(conn)
-	// Create stock prices database instance
-	spdb := data.NewStockPricesDB(wc, l)
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, spdb)
+	control := handlers.NewControlHandler(l, wc)
 
 	// Register handlers
 	sm.HandleFunc("/info", control.GetInfo)

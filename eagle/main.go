@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/fercevik729/STLKER/watcher-api/data"
-	server "github.com/fercevik729/STLKER/watcher-api/go-server"
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	"github.com/fercevik729/STLKER/eagle/data"
+	pb "github.com/fercevik729/STLKER/eagle/protos"
+	server "github.com/fercevik729/STLKER/eagle/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

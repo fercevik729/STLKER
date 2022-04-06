@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	pb "github.com/fercevik729/STLKER/eagle/protos"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

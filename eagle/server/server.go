@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fercevik729/STLKER/watcher-api/data"
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	"github.com/fercevik729/STLKER/eagle/data"
+	pb "github.com/fercevik729/STLKER/eagle/protos"
 )
 
 type WatcherServer struct {

@@ -1,65 +1,30 @@
-package data
+package handlers
 
 import (
 	"context"
 	"fmt"
-	"log"
-	"strconv"
 	"time"
 
 	"github.com/fercevik729/STLKER/watcher-api/data"
-	"github.com/fercevik729/STLKER/watcher-api/protos"
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 )
 
-type StockClientDB struct {
-	client protos.WatcherClient
-	log    *log.Logger
-	prices map[string]float64
-	sub    pb.Watcher_SubscribeTickerClient
-}
-
-type StockPrice struct {
-	Ticker string  `json:"ticker"`
-	Price  float64 `json:"price"`
-	Dest   string  `json:"dest"`
-}
-
-func NewStockPricesDB(client protos.WatcherClient, l *log.Logger) *StockClientDB {
-	spdb := &StockClientDB{
-		client: client,
-		log:    l,
-		prices: make(map[string]float64),
-		sub:    nil,
-	}
-
-	return spdb
-}
-
-// GetInfo returns a pointer to a Stock struct and an error if one arises
-func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error) {
+// Info returns a pointer to a Stock struct and an error if one arises
+func Info(ticker, destination string, client pb.WatcherClient) (*data.Stock, error) {
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")
 	}
-	tr := &protos.TickerRequest{
+	tr := &pb.TickerRequest{
 		Ticker:      ticker,
-		Destination: protos.Currencies(protos.Currencies_value[destination]),
+		Destination: pb.Currencies(pb.Currencies_value[destination]),
 	}
-	s.log.Println("Destination:", destination)
 	// Have the request timeout after 15 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	stockInfo, err := s.client.GetInfo(ctx, tr)
+	stockInfo, err := client.GetInfo(ctx, tr)
 	if err != nil {
 		return nil, err
 	}
-	// update map of prices (cache)
-	price, err := strconv.ParseFloat(stockInfo.Price, 64)
-	if err != nil {
-		return nil, err
-	}
-	s.prices[ticker] = price
-
 	// Return a pointer to a Stock struct
 	return &data.Stock{
 		Symbol:        ticker,
@@ -75,16 +40,16 @@ func (s *StockClientDB) GetInfo(ticker, destination string) (*data.Stock, error)
 }
 
 // MoreInfo returns a pointer to a MoreStock struct and an error if one arises
-func (s *StockClientDB) MoreInfo(ticker string) (*data.MoreStock, error) {
+func CompanyOverview(ticker string, client pb.WatcherClient) (*data.MoreStock, error) {
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")
 	}
-	tr := &protos.TickerRequest{
+	tr := &pb.TickerRequest{
 		Ticker: ticker,
 	}
 	// Time out the request after 15 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	moreStockInfo, err := s.client.MoreInfo(ctx, tr)
+	moreStockInfo, err := client.MoreInfo(ctx, tr)
 	defer cancel()
 
 	if err != nil {
