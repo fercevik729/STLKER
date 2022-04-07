@@ -34,11 +34,16 @@ func main() {
 	// Create handlers
 	control := handlers.NewControlHandler(l, wc)
 
-	// Register handlers
-	sm.HandleFunc("/info", control.GetInfo)
-	sm.HandleFunc("/moreinfo", control.MoreInfo)
+	// Create subrouters and register handlers
+	getRouter := sm.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/info", control.GetInfo)
+	getRouter.HandleFunc("/moreinfo", control.MoreInfo)
+	sm.HandleFunc("/portfolio", control.GetPortfolio)
 
-	// CORS for  UI
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/save", control.SavePortfolio)
+
+	// CORS for UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
 
 	// Create server

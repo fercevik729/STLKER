@@ -1,70 +1,37 @@
 package handlers
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
 
 	"github.com/fercevik729/STLKER/octopus/data"
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-// ControlHandler is a http.Handler
-type ControlHandler struct {
-	l      *log.Logger
-	client pb.WatcherClient
-}
-
-type StockRequest struct {
-	Ticker      string `json:"ticker"`
-	Destination string `json:"dest"`
-}
-
-type Stock struct {
-	StockRequest
-	Price float64
-}
 
 type PortfolioRequest struct {
 	Name string `json:"Portfolio"`
 }
 
-// A Portfolio is a GORM model that is a slice of Stock structs
-type Portfolio struct {
-	gorm.Model
-	Name   string `json"Name"`
-	Stocks []*Stock
-
-	/*
-		{
-		Portfolio 1:
-			[
-				{
-					Ticker: TSLA,
-					Price: 12223,
-					Dest: USD
-
-				},
-				{
-
-				}
-			]
-		}
-
-	*/
+type Stock struct {
+	Ticker      string `json:"Ticker"`
+	Shares      int    `json:"Shares"`
+	Destination string `json:"Currency"`
+	price       float64
 }
 
-// NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger, wc pb.WatcherClient) *ControlHandler {
-	return &ControlHandler{
-		l:      log,
-		client: wc,
-	}
+type Stocks struct {
+	List []Stock `json:"Stocks"`
+}
+
+// A Portfolio is a GORM model that is a slice of Stock structs
+// TODO: add number of shares
+type Portfolio struct {
+	gorm.Model
+	Name string `json:"Name"`
+	St   Stocks
 }
 
 func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +68,9 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Retrieving updated stock prices")
 
 	// Concurrently retrieve stock prices
+	stocks := port.St.List
 	var wg *sync.WaitGroup
-	for _, stock := range port.Stocks {
+	for _, stock := range stocks {
 		wg.Add(1)
 		go func(s *Stock) {
 			st, err := Info(s.Ticker, s.Destination, c.client)
@@ -118,9 +86,9 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 			}
 			// Set stock price
 			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker)
-			s.Price = price
+			s.price = price
 			wg.Done()
-		}(stock)
+		}(&stock)
 	}
 	wg.Wait()
 
@@ -162,63 +130,6 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.ToJSON(port, w)
-
-}
-
-func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
-
-	// Retrieve and set parameters
-	sr, err := getParams(r)
-	if err != nil {
-		c.l.Println("[ERROR]", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	ticker, destCurr := sr.Ticker, sr.Destination
-	c.l.Println("[DEBUG] Handle GetInfo for", ticker, "in", destCurr)
-
-	// Get the stock information
-	stock, err := Info(ticker, destCurr, c.client)
-	if err != nil {
-		c.l.Println("[ERROR] Couldn't get ticker information, ensure ticker and destination currency are valid")
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	// Write the data to the client
-	w.Header().Set("Content-Type", "application/json")
-	data.ToJSON(stock, w)
-
-}
-func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
-	// Get and set parameters
-	sr, err := getParams(r)
-	if err != nil {
-		c.l.Println("[ERROR]", err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	ticker := sr.Ticker
-	c.l.Println("[DEBUG] Handle MoreInfo for", ticker)
-
-	// Get the company overview
-	co, err := CompanyOverview(ticker, c.client)
-	if err != nil {
-		c.l.Println("[ERROR] Couldn't get company overview information for ticker:", ticker, "err:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	data.ToJSON(co, w)
-}
-
-// getParams is a helper function to retrieve the parameters for the API's endpoints
-func getParams(r *http.Request) (*StockRequest, error) {
-	// Get the parameters from the request body
-	params := &StockRequest{}
-	data.FromJSON(params, r.Body)
-	// Check if parameters were empty
-	if reflect.DeepEqual(*params, StockRequest{}) {
-		return nil, fmt.Errorf("must provide a ticker")
-	}
-	return params, nil
 
 }
 
