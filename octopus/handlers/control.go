@@ -30,10 +30,14 @@ type Stock struct {
 	Price float64
 }
 
+type PortfolioRequest struct {
+	Name string `json:"Portfolio"`
+}
+
 // A Portfolio is a GORM model that is a slice of Stock structs
 type Portfolio struct {
 	gorm.Model
-	Name   string
+	Name   string `json"Name"`
 	Stocks []*Stock
 
 	/*
@@ -130,6 +134,34 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
+	pr := &PortfolioRequest{}
+	data.FromJSON(pr, r.Body)
+
+	// Open sqlite db connection
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't connect to database")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	// Get generic sql.DB object
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	defer sqlDB.Close()
+
+	port := Portfolio{}
+	// Check if a portfolio with that name already exists
+	db.First(&port, 1)
+
+	// Check if portfolio is empty
+	if reflect.DeepEqual(port, Portfolio{}) {
+		c.l.Println("[DEBUG] No results found")
+		return
+	}
+	data.ToJSON(port, w)
 
 }
 
