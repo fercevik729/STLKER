@@ -36,12 +36,12 @@ func main() {
 
 	// Create subrouters and register handlers
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/info", control.GetInfo)
-	getRouter.HandleFunc("/moreinfo", control.MoreInfo)
-	sm.HandleFunc("/portfolio", control.GetPortfolio)
+	getRouter.HandleFunc("/portfolio", control.GetPortfolio)
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/save", control.SavePortfolio)
+	postRouter.HandleFunc("/info", control.GetInfo)
+	postRouter.HandleFunc("/moreinfo", control.MoreInfo)
 
 	// CORS for UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
