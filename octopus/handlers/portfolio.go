@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/fercevik729/STLKER/octopus/data"
+	"github.com/gorilla/mux"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -29,6 +30,7 @@ type Stocks struct {
 // A Portfolio is a GORM model that is a slice of Stock structs
 // TODO: add number of shares
 type Portfolio struct {
+	ID int64
 	gorm.Model
 	Name string `json:"Name"`
 	St   Stocks
@@ -102,8 +104,8 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
-	pr := &PortfolioRequest{}
-	data.FromJSON(pr, r.Body)
+	// Retrieve portfolio name parameter
+	name := mux.Vars(r)["name"]
 
 	// Open sqlite db connection
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
@@ -120,9 +122,9 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	defer sqlDB.Close()
 
-	port := Portfolio{}
+	var port Portfolio
 	// Check if a portfolio with that name already exists
-	db.First(&port, 1)
+	db.First(&port, "name = ?", name)
 
 	// Check if portfolio is empty
 	if reflect.DeepEqual(port, Portfolio{}) {

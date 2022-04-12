@@ -1,24 +1,18 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	"github.com/gorilla/mux"
 )
 
 // ControlHandler is a http.Handler
 type ControlHandler struct {
 	l      *log.Logger
 	client pb.WatcherClient
-}
-
-type StockRequest struct {
-	Ticker      string `json:"ticker"`
-	Destination string `json:"dest"`
 }
 
 // NewControlHandler is a constructor
@@ -31,14 +25,11 @@ func NewControlHandler(log *log.Logger, wc pb.WatcherClient) *ControlHandler {
 
 func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 
-	// Retrieve and set parameters
-	sr, err := getParams(r)
-	if err != nil {
-		c.l.Println("[ERROR]", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	ticker, destCurr := sr.Ticker, sr.Destination
+	// Retrieve URI variables
+	vars := mux.Vars(r)
+	ticker := vars["ticker"]
+	destCurr := vars["currency"]
+
 	c.l.Println("[DEBUG] Handle GetInfo for", ticker, "in", destCurr)
 
 	// Get the stock information
@@ -53,13 +44,9 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 }
 func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
-	// Get and set parameters
-	sr, err := getParams(r)
-	if err != nil {
-		c.l.Println("[ERROR]", err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	ticker := sr.Ticker
+	// Retrieve URI variable
+	vars := mux.Vars(r)
+	ticker := vars["ticker"]
 	c.l.Println("[DEBUG] Handle MoreInfo for", ticker)
 
 	// Get the company overview
@@ -71,17 +58,4 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	data.ToJSON(co, w)
-}
-
-// getParams is a helper function to retrieve the parameters for the API's endpoints
-func getParams(r *http.Request) (*StockRequest, error) {
-	// Get the parameters from the request body
-	params := &StockRequest{}
-	data.FromJSON(params, r.Body)
-	// Check if parameters were empty
-	if reflect.DeepEqual(*params, StockRequest{}) {
-		return nil, fmt.Errorf("must provide a ticker")
-	}
-	return params, nil
-
 }
