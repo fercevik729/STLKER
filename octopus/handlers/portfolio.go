@@ -3,8 +3,6 @@ package handlers
 import (
 	"net/http"
 	"reflect"
-	"strconv"
-	"sync"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/gorilla/mux"
@@ -12,28 +10,23 @@ import (
 	"gorm.io/gorm"
 )
 
-type PortfolioRequest struct {
-	Name string `json:"Portfolio"`
+// TODO: implement Scan and Value methods for nested data types
+
+// A Portfolio is a GORM model that is a slice of Stock structs
+type Portfolio struct {
+	gorm.Model
+	ID uint `gorm:"primary_key"`
+	// Name is the name of the portfolio
+	Name string `json:"Name"`
+	// Stocks is a slice of Stock structs
+	Stocks []Stock `json:"Stocks"`
 }
 
 type Stock struct {
 	Ticker      string `json:"Ticker"`
-	Shares      int    `json:"Shares"`
-	Destination string `json:"Currency"`
-	price       float64
-}
-
-type Stocks struct {
-	List []Stock `json:"Stocks"`
-}
-
-// A Portfolio is a GORM model that is a slice of Stock structs
-// TODO: add number of shares
-type Portfolio struct {
-	ID int64
-	gorm.Model
-	Name string `json:"Name"`
-	St   Stocks
+	BoughtPrice string `json:"Bought Price"`
+	CurrPrice   string `json:"Current Price"`
+	Shares      string `json:"Shares"`
 }
 
 func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -54,21 +47,34 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	db.AutoMigrate(&Portfolio{})
 
 	// Retrieve the portfolio from the request body
-	portfolio := getPortfolioParams(r)
+	reqPortfolio := Portfolio{}
+	data.FromJSON(&reqPortfolio, r.Body)
 
-	port := Portfolio{}
+	sqlPort := Portfolio{}
 	// Check if a portfolio with that name already exists
-	db.First(&port, 1)
+	db.First(&sqlPort, "name = ?", reqPortfolio.Name)
 
 	// If a portfolio with that name does exist return an error
-	if !reflect.DeepEqual(port, Portfolio{}) {
+	if !reflect.DeepEqual(sqlPort, Portfolio{}) {
 		c.l.Println("[ERROR] A portfolio with that name already exists")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	// Retrieve prices for all stocks in the portfolio
 	c.l.Println("[INFO] Retrieving updated stock prices")
+	// c.updatePortfolio(&port)
 
+	// Create portfolio entry
+	db.Create(reqPortfolio)
+	c.l.Println("[DEBUG] Created portfolio named", reqPortfolio.Name)
+
+	// Close database connection
+	sqlDB.Close()
+
+}
+
+/*
+func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 	// Concurrently retrieve stock prices
 	stocks := port.St.List
 	var wg *sync.WaitGroup
@@ -88,20 +94,14 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 			}
 			// Set stock price
 			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker)
-			s.price = price
+			s.updatePrice(price)
 			wg.Done()
 		}(&stock)
 	}
 	wg.Wait()
 
-	// Create portfolio entry
-	db.Create(portfolio)
-	c.l.Println("[DEBUG] Created portfolio named", portfolio.Name)
-
-	// Close database connection
-	sqlDB.Close()
-
 }
+*/
 
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter
@@ -133,12 +133,4 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	data.ToJSON(port, w)
 
-}
-
-// getPortfolioParams is a helper function to retrieve the individual stocks in a call to SavePortfolio
-func getPortfolioParams(r *http.Request) *Portfolio {
-	// Initialize portfolio
-	port := &Portfolio{}
-	data.FromJSON(port, r.Body)
-	return port
 }

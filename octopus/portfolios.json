@@ -1,16 +1,9 @@
 {
     "Name": "First",
-    "Stocks": [
-        {
-            "Ticker": "SPY",
-            "Shares": 12,
-            "Currency": "USD"
-        },
-        {
-            "Ticker": "TSLA",
-            "Shares": 100,
-            "Currency": "USD"
-        }
-    ]
+    "Stocks":
+    {
+        "SPY": 100,
+        "TSLA": 3.5
+    }
 
 }
