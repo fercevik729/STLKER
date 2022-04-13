@@ -1,11 +1,15 @@
 {
-    "Name": "First",
+    "Name": "Retirement",
     "Securities": [
         {
             "Ticker": "SPY",
             "Bought Price": 120.98,
-            "Current Price": 438.29,
             "Shares": 10
+        },
+        {
+            "Ticker": "TSLA",
+            "Bought Price": 100,
+            "Shares": 50
         }
     ]
 }

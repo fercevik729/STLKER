@@ -3,6 +3,8 @@ package handlers
 import (
 	"net/http"
 	"reflect"
+	"strconv"
+	"sync"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/gorilla/mux"
@@ -20,7 +22,7 @@ type Portfolio struct {
 	// Name is the name of the portfolio
 	Name string `json:"Name"`
 	// Stocks is a slice of Security structs
-	Securities []Security `json:"Securities" gorm:"foreignKey:ID"`
+	Securities []*Security `json:"Securities" gorm:"foreignKey:ID"`
 }
 
 type Security struct {
@@ -30,6 +32,8 @@ type Security struct {
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
 	Shares      float64 `json:"Shares"`
+	// Currency is the destination currency of the stock
+	Currency string `json:"Currency"`
 }
 
 func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -51,8 +55,6 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the portfolio from the request body
 	reqPortfolio := Portfolio{}
-	// body, _ := ioutil.ReadAll(r.Body)
-	//fmt.Println(string(body))
 	data.FromJSON(&reqPortfolio, r.Body)
 
 	sqlPort := Portfolio{}
@@ -67,11 +69,13 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	// Retrieve prices for all stocks in the portfolio
 	c.l.Println("[INFO] Retrieving updated stock prices")
-	// c.updatePortfolio(&port)
+	c.updatePortfolio(&reqPortfolio)
 
 	// Create portfolio entry
 	db.Create(&reqPortfolio)
 	c.l.Println("[DEBUG] Created portfolio named", reqPortfolio.Name)
+
+	// Save changes
 	db.Save(&reqPortfolio)
 
 	// Close database connection
@@ -79,15 +83,14 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 
 }
 
-/*
 func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 	// Concurrently retrieve stock prices
-	stocks := port.St.List
-	var wg *sync.WaitGroup
-	for _, stock := range stocks {
+	wg := &sync.WaitGroup{}
+	for _, sec := range port.Securities {
 		wg.Add(1)
-		go func(s *Stock) {
-			st, err := Info(s.Ticker, s.Destination, c.client)
+		go func(s *Security) {
+			// Get security information using Info method defined in driver.go
+			st, err := Info(s.Ticker, s.Currency, c.client)
 			if err != nil {
 				c.l.Println("[ERROR] Couldn't get info for ticker:", s.Ticker)
 				return
@@ -98,16 +101,15 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 				c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker)
 				return
 			}
-			// Set stock price
-			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker)
-			s.updatePrice(price)
+			// Set stock price in target currency
+			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.CurrPrice)
+			s.CurrPrice = price
 			wg.Done()
-		}(&stock)
+		}(sec)
 	}
 	wg.Wait()
 
 }
-*/
 
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter
