@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/fercevik729/STLKER/octopus/data"
@@ -11,8 +12,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-// TODO: change sql database schema
 
 // A Portfolio is a GORM model that is intended to mirror the structure
 // of a simple portfolio
@@ -22,21 +21,35 @@ type Portfolio struct {
 	// Name is the name of the portfolio
 	Name string `json:"Name"`
 	// Stocks is a slice of Security structs
-	Securities []*Security `json:"Securities" gorm:"foreignKey:ID"`
+	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 
 type Security struct {
 	gorm.Model
-	ID          uint
+	SecurityID  int     `gorm:"primary_key"`
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
 	Shares      float64 `json:"Shares"`
 	// Currency is the destination currency of the stock
-	Currency string `json:"Currency"`
+	Currency string `json:"Currency" gorm:"default:USD"`
+	// Foreign key
+	PortfolioID uint
 }
 
 func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
+	c.l.Println("[INFO] Handle Save Portfolio")
+	// Retrieve the portfolio from the request body
+	reqPort := Portfolio{}
+	data.FromJSON(&reqPort, r.Body)
+
+	// Check if name is empty which generally signifies that the json body was misconstrued
+	// or if the name contains spaces, since it isn't compatible with the URI
+	if reqPort.Name == "" || strings.Contains(reqPort.Name, " ") {
+		c.l.Println("[ERROR] Bad portfolio request")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
 	// Open sqlite db connection
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
@@ -53,13 +66,9 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Migrate schema
 	db.AutoMigrate(&Portfolio{}, &Security{})
 
-	// Retrieve the portfolio from the request body
-	reqPortfolio := Portfolio{}
-	data.FromJSON(&reqPortfolio, r.Body)
-
 	sqlPort := Portfolio{}
 	// Check if a portfolio with that name already exists
-	db.First(&sqlPort, "name = ?", reqPortfolio.Name)
+	db.First(&sqlPort, "name = ?", reqPort.Name)
 
 	// If a portfolio with that name does exist return an error
 	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
@@ -69,17 +78,46 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	// Retrieve prices for all stocks in the portfolio
 	c.l.Println("[INFO] Retrieving updated stock prices")
-	c.updatePortfolio(&reqPortfolio)
+	c.updatePortfolio(&reqPort)
 
 	// Create portfolio entry
-	db.Create(&reqPortfolio)
-	c.l.Println("[DEBUG] Created portfolio named", reqPortfolio.Name)
-
-	// Save changes
-	db.Save(&reqPortfolio)
+	db.Create(&reqPort)
+	c.l.Println("[DEBUG] Created portfolio named", reqPort.Name)
 
 	// Close database connection
 	sqlDB.Close()
+
+}
+
+func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
+	// Retrieve portfolio name parameter
+	name := mux.Vars(r)["name"]
+	c.l.Println("[INFO] Handle Get Portfolio for:", name)
+
+	// Open sqlite db connection
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't connect to database")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	// Get generic sql.DB object
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	defer sqlDB.Close()
+
+	var port Portfolio
+	// Check if a portfolio with that name already exists
+	db.Where("name = ?", name).Preload("Securities").Find(&port)
+	// Check if portfolio is empty
+	if reflect.DeepEqual(port, Portfolio{}) {
+		c.l.Println("[DEBUG] No results found")
+		return
+	}
+	data.ToJSON(port, w)
 
 }
 
@@ -101,44 +139,15 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 				c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker)
 				return
 			}
-			// Set stock price in target currency
-			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.CurrPrice)
+			// Set stock price in target currency (USD by default)
+			if s.Currency == "" {
+				s.Currency = "USD"
+			}
+			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.Currency)
 			s.CurrPrice = price
 			wg.Done()
 		}(sec)
 	}
 	wg.Wait()
-
-}
-
-func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
-	// Retrieve portfolio name parameter
-	name := mux.Vars(r)["name"]
-
-	// Open sqlite db connection
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
-	if err != nil {
-		c.l.Println("[ERROR] Couldn't connect to database")
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
-	// Get generic sql.DB object
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	defer sqlDB.Close()
-
-	var port Portfolio
-	// Check if a portfolio with that name already exists
-	db.First(&port, "name = ?", name)
-
-	// Check if portfolio is empty
-	if reflect.DeepEqual(port, Portfolio{}) {
-		c.l.Println("[DEBUG] No results found")
-		return
-	}
-	data.ToJSON(port, w)
 
 }

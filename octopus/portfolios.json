@@ -1,15 +1,20 @@
 {
-    "Name": "Retirement",
+    "Name": "MiddleSchool",
     "Securities": [
         {
-            "Ticker": "SPY",
-            "Bought Price": 120.98,
+            "Ticker": "V",
+            "Bought Price": 10.21,
             "Shares": 10
         },
         {
-            "Ticker": "TSLA",
-            "Bought Price": 100,
+            "Ticker": "F",
+            "Bought Price": 1.50, 
             "Shares": 50
+        },
+        {
+            "Ticker": "GME",
+            "Bought Price": 20.21,
+            "Shares": 25
         }
     ]
 }
