@@ -10,23 +10,26 @@ import (
 	"gorm.io/gorm"
 )
 
-// TODO: implement Scan and Value methods for nested data types
+// TODO: change sql database schema
 
-// A Portfolio is a GORM model that is a slice of Stock structs
+// A Portfolio is a GORM model that is intended to mirror the structure
+// of a simple portfolio
 type Portfolio struct {
 	gorm.Model
 	ID uint `gorm:"primary_key"`
 	// Name is the name of the portfolio
 	Name string `json:"Name"`
-	// Stocks is a slice of Stock structs
-	Stocks []Stock `json:"Stocks"`
+	// Stocks is a slice of Security structs
+	Securities []Security `json:"Securities" gorm:"foreignKey:ID"`
 }
 
-type Stock struct {
-	Ticker      string `json:"Ticker"`
-	BoughtPrice string `json:"Bought Price"`
-	CurrPrice   string `json:"Current Price"`
-	Shares      string `json:"Shares"`
+type Security struct {
+	gorm.Model
+	ID          uint
+	Ticker      string  `json:"Ticker"`
+	BoughtPrice float64 `json:"Bought Price"`
+	CurrPrice   float64 `json:"Current Price"`
+	Shares      float64 `json:"Shares"`
 }
 
 func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -44,10 +47,12 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	// Migrate schema
-	db.AutoMigrate(&Portfolio{})
+	db.AutoMigrate(&Portfolio{}, &Security{})
 
 	// Retrieve the portfolio from the request body
 	reqPortfolio := Portfolio{}
+	// body, _ := ioutil.ReadAll(r.Body)
+	//fmt.Println(string(body))
 	data.FromJSON(&reqPortfolio, r.Body)
 
 	sqlPort := Portfolio{}
@@ -55,7 +60,7 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	db.First(&sqlPort, "name = ?", reqPortfolio.Name)
 
 	// If a portfolio with that name does exist return an error
-	if !reflect.DeepEqual(sqlPort, Portfolio{}) {
+	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
 		c.l.Println("[ERROR] A portfolio with that name already exists")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -65,8 +70,9 @@ func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
 	// c.updatePortfolio(&port)
 
 	// Create portfolio entry
-	db.Create(reqPortfolio)
+	db.Create(&reqPortfolio)
 	c.l.Println("[DEBUG] Created portfolio named", reqPortfolio.Name)
+	db.Save(&reqPortfolio)
 
 	// Close database connection
 	sqlDB.Close()
