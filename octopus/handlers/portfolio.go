@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/gorilla/mux"
@@ -14,19 +16,70 @@ import (
 	"gorm.io/gorm"
 )
 
+type STLKERModel struct {
+	ID        uint         `json:"-" gorm:"primaryKey"`
+	CreatedAt time.Time    `json:"-"`
+	UpdatedAt time.Time    `json:"-"`
+	DeletedAt sql.NullTime `json:"-" gorm:"index"`
+}
+
 // A Portfolio is a GORM model that is intended to mirror the structure
 // of a simple portfolio
 type Portfolio struct {
-	gorm.Model
-	ID uint `gorm:"primary_key"`
+	STLKERModel
 	// Name is the name of the portfolio
 	Name string `json:"Name"`
 	// Stocks is a slice of Security structs
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 
+func (p *Portfolio) calcProfits() (*Profits, error) {
+	original := 0.
+	new := 0.
+
+	for _, sec := range p.Securities {
+
+		// Update the individual security's gains and percent changes
+		gain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
+		if err != nil {
+			return nil, err
+		}
+		sec.setMoves(gain, fmt.Sprintf("%.2f%%", (gain)/sec.BoughtPrice*100))
+
+		original += sec.BoughtPrice * sec.Shares
+		new += sec.CurrPrice * sec.Shares
+	}
+
+	// Round original and new
+	var err error
+	original, err = strconv.ParseFloat(fmt.Sprintf("%.2f", original), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	new, err = strconv.ParseFloat(fmt.Sprintf("%.2f", new), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compute and round change and profits
+	percChange := fmt.Sprintf("%.2f%%", (new-original)/original*100)
+
+	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
+	if err != nil {
+		return nil, err
+	}
+	return &Profits{
+		OriginalValue: original,
+		NewValue:      new,
+		Moves:         p.Securities,
+		NetGain:       netGain,
+		NetChange:     percChange,
+	}, nil
+}
+
 type Security struct {
-	gorm.Model
+	STLKERModel
 	SecurityID  int     `gorm:"primary_key" json:"-"`
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
@@ -40,8 +93,13 @@ type Security struct {
 	PortfolioID uint `json:"-"`
 }
 
+func (s *Security) setMoves(gain float64, change string) {
+	s.Gain = gain
+	s.Change = change
+}
+
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Post Portfolio")
+	c.l.Println("[INFO] Handle Create Portfolio")
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
@@ -170,7 +228,7 @@ func (c *ControlHandler) GetProfits(w http.ResponseWriter, r *http.Request) {
 
 	// Calculate profits
 	db.Where("name = ?", name).Preload("Securities").Find(&port)
-	profits, err := calcProfits(port)
+	profits, err := port.calcProfits()
 	if err != nil {
 		c.l.Println("[ERROR] Rounding profit:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -240,49 +298,4 @@ type Profits struct {
 	NetGain       float64     `json:"Net Gain"`
 	Moves         []*Security `json:"Securities"`
 	NetChange     string      `json:"Net Change"`
-}
-
-func calcProfits(p *Portfolio) (*Profits, error) {
-	original := 0.
-	new := 0.
-	for _, sec := range p.Securities {
-
-		// Update the individual security's gains and percent changes
-		gain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
-		if err != nil {
-			return nil, err
-		}
-		sec.Gain = gain
-		sec.Change = fmt.Sprintf("%.2f%%", (gain)/sec.BoughtPrice*100)
-
-		original += sec.BoughtPrice * sec.Shares
-		new += sec.CurrPrice * sec.Shares
-	}
-
-	// Round original and new
-	var err error
-	original, err = strconv.ParseFloat(fmt.Sprintf("%.2f", original), 64)
-	if err != nil {
-		return nil, err
-	}
-
-	new, err = strconv.ParseFloat(fmt.Sprintf("%.2f", new), 64)
-	if err != nil {
-		return nil, err
-	}
-
-	// Compute and round change and profits
-	percChange := fmt.Sprintf("%.2f%%", (new-original)/original*100)
-
-	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
-	if err != nil {
-		return nil, err
-	}
-	return &Profits{
-		OriginalValue: original,
-		NewValue:      new,
-		Moves:         p.Securities,
-		NetGain:       netGain,
-		NetChange:     percChange,
-	}, nil
 }
