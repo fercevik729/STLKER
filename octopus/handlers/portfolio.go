@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -37,8 +38,8 @@ type Security struct {
 	PortfolioID uint
 }
 
-func (c *ControlHandler) SavePortfolio(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Save Portfolio")
+func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
+	c.l.Println("[INFO] Handle Post Portfolio")
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
@@ -94,6 +95,11 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	c.l.Println("[INFO] Handle Get Portfolio for:", name)
 
+	var port Portfolio
+	err := c.updateDBPort(&port)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
 	// Open sqlite db connection
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
@@ -109,7 +115,6 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	defer sqlDB.Close()
 
-	var port Portfolio
 	// Check if a portfolio with that name already exists
 	db.Where("name = ?", name).Preload("Securities").Find(&port)
 	// Check if portfolio is empty
@@ -119,6 +124,81 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	data.ToJSON(port, w)
 
+}
+
+func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	c.l.Println("[INFO] Handle Delete Portfolio for:", name)
+
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't connect to database")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	defer sqlDB.Close()
+	var port Portfolio
+
+	// Delete portfolio
+	db.Model(port).Where("name = ?", name).Delete(&port)
+}
+
+func (c *ControlHandler) GetProfits(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	c.l.Println("[INFO] Handle Get Profits for:", name)
+
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't connect to database")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	defer sqlDB.Close()
+	var port *Portfolio
+
+	// Calculate profits
+	db.Where("name = ?", name).Preload("Securities").Find(&port)
+	profits, err := calcProfits(port)
+	if err != nil {
+		c.l.Println("[ERROR] Rounding profit:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	data.ToJSON(profits, w)
+
+}
+
+func (c *ControlHandler) updateDBPort(port *Portfolio) error {
+	// Update prices using gRPC API
+	c.updatePortfolio(port)
+
+	// Update database entry using GORM
+	// Open sqlite db connection
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't connect to database")
+		return err
+	}
+
+	// Get generic sql.DB object
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
+		return err
+	}
+	defer sqlDB.Close()
+	db.Model(&Portfolio{}).Where("name = ?", port.Name).Update("Securities", port.Securities)
+
+	return nil
 }
 
 func (c *ControlHandler) updatePortfolio(port *Portfolio) {
@@ -150,4 +230,45 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 	}
 	wg.Wait()
 
+}
+
+type Profits struct {
+	OriginalValue float64 `json:"Original Value"`
+	NewValue      float64 `json:"New Value"`
+	Gains         float64 `json:"Gains"`
+	Change        string  `json:"Percent Change"`
+}
+
+func calcProfits(p *Portfolio) (*Profits, error) {
+	original := 0.
+	new := 0.
+	for _, sec := range p.Securities {
+		original += sec.BoughtPrice * sec.Shares
+		new += sec.CurrPrice * sec.Shares
+	}
+
+	var err error
+	original, err = strconv.ParseFloat(fmt.Sprintf("%.2f", original), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	new, err = strconv.ParseFloat(fmt.Sprintf("%.2f", new), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compute and round change and profits
+	percChange := fmt.Sprintf("%.2f%%", (new-original)/original*100)
+
+	gains, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
+	if err != nil {
+		return nil, err
+	}
+	return &Profits{
+		OriginalValue: original,
+		NewValue:      new,
+		Gains:         gains,
+		Change:        percChange,
+	}, nil
 }
