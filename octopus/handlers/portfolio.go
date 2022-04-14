@@ -17,7 +17,7 @@ import (
 )
 
 type STLKERModel struct {
-	ID        uint         `json:"-" gorm:"primaryKey"`
+	ID        uint         `gorm:"primaryKey"`
 	CreatedAt time.Time    `json:"-"`
 	UpdatedAt time.Time    `json:"-"`
 	DeletedAt sql.NullTime `json:"-" gorm:"index"`
@@ -78,26 +78,6 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 		NetGain:       netGain,
 		NetChange:     percChange,
 	}, nil
-}
-
-type Security struct {
-	STLKERModel
-	SecurityID  int     `gorm:"primary_key" json:"-"`
-	Ticker      string  `json:"Ticker"`
-	BoughtPrice float64 `json:"Bought Price"`
-	CurrPrice   float64 `json:"Current Price"`
-	Shares      float64 `json:"Shares"`
-	Gain        float64 `json:"Gain"`
-	Change      string  `json:"Percent Change"`
-	// Currency is the destination currency of the stock
-	Currency string `json:"Currency" gorm:"default:USD"`
-	// Foreign key
-	PortfolioID uint `json:"-"`
-}
-
-func (s *Security) setMoves(gain float64, change string) {
-	s.Gain = gain
-	s.Change = change
 }
 
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -261,8 +241,8 @@ func (c *ControlHandler) updateDB(port *Portfolio) error {
 	defer sqlDB.Close()
 
 	// Update associations
-	db.Model(&Portfolio{}).Where("name = ?", port.Name).Find(&port)
-	db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&port)
+	var dbPort Portfolio
+	db.Model(&dbPort).Association("Securities").Replace(&port.Securities)
 
 	return nil
 }
