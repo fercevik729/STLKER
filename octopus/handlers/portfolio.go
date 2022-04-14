@@ -33,19 +33,19 @@ type Portfolio struct {
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 
+type Profits struct {
+	OriginalValue float64     `json:"Original Value"`
+	NewValue      float64     `json:"New Value"`
+	NetGain       float64     `json:"Net Gain"`
+	Moves         []*Security `json:"Securities"`
+	NetChange     string      `json:"Net Change"`
+}
+
 func (p *Portfolio) calcProfits() (*Profits, error) {
 	original := 0.
 	new := 0.
-
+	// Iterate over securities and calculate change and percent change
 	for _, sec := range p.Securities {
-
-		// Update the individual security's gains and percent changes
-		gain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
-		if err != nil {
-			return nil, err
-		}
-		sec.setMoves(gain, fmt.Sprintf("%.2f%%", (gain)/sec.BoughtPrice*100))
-
 		original += sec.BoughtPrice * sec.Shares
 		new += sec.CurrPrice * sec.Shares
 	}
@@ -69,6 +69,8 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Return profits
 	return &Profits{
 		OriginalValue: original,
 		NewValue:      new,
@@ -139,7 +141,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	}
 	// Retrieve prices for all stocks in the portfolio
 	c.l.Println("[INFO] Retrieving updated stock prices")
-	c.updatePortfolio(&reqPort)
+	c.updatePrices(&reqPort)
 
 	// Create portfolio entry
 	db.Create(&reqPort)
@@ -155,11 +157,6 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	c.l.Println("[INFO] Handle Get Portfolio for:", name)
 
-	var port Portfolio
-	err := c.updateDBPort(&port)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
 	// Open sqlite db connection
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
@@ -175,12 +172,17 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	defer sqlDB.Close()
 
+	var port Portfolio
 	// Check if a portfolio with that name already exists
 	db.Where("name = ?", name).Preload("Securities").Find(&port)
 	// Check if portfolio is empty
 	if reflect.DeepEqual(port, Portfolio{}) {
 		c.l.Println("[DEBUG] No results found")
 		return
+	}
+	err = c.updateDB(&port)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 	}
 	data.ToJSON(port, w)
 
@@ -224,11 +226,12 @@ func (c *ControlHandler) GetProfits(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 	defer sqlDB.Close()
-	var port *Portfolio
+	var port Portfolio
 
 	// Calculate profits
 	db.Where("name = ?", name).Preload("Securities").Find(&port)
 	profits, err := port.calcProfits()
+
 	if err != nil {
 		c.l.Println("[ERROR] Rounding profit:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -237,9 +240,9 @@ func (c *ControlHandler) GetProfits(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (c *ControlHandler) updateDBPort(port *Portfolio) error {
+func (c *ControlHandler) updateDB(port *Portfolio) error {
 	// Update prices using gRPC API
-	c.updatePortfolio(port)
+	c.updatePrices(port)
 
 	// Update database entry using GORM
 	// Open sqlite db connection
@@ -256,12 +259,15 @@ func (c *ControlHandler) updateDBPort(port *Portfolio) error {
 		return err
 	}
 	defer sqlDB.Close()
-	db.Model(&Portfolio{}).Where("name = ?", port.Name).Update("Securities", port.Securities)
+
+	// Update associations
+	db.Model(&Portfolio{}).Where("name = ?", port.Name).Find(&port)
+	db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&port)
 
 	return nil
 }
 
-func (c *ControlHandler) updatePortfolio(port *Portfolio) {
+func (c *ControlHandler) updatePrices(port *Portfolio) {
 	// Concurrently retrieve stock prices
 	wg := &sync.WaitGroup{}
 	for _, sec := range port.Securities {
@@ -285,17 +291,14 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 			}
 			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.Currency)
 			s.CurrPrice = price
+
+			// Update the individual security's gains and percent changes
+			gain, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", (s.CurrPrice-s.BoughtPrice)*s.Shares), 64)
+			s.setMoves(gain, fmt.Sprintf("%.2f%%", (s.CurrPrice-s.BoughtPrice)/s.BoughtPrice*100))
+
 			wg.Done()
 		}(sec)
 	}
 	wg.Wait()
 
-}
-
-type Profits struct {
-	OriginalValue float64     `json:"Original Value"`
-	NewValue      float64     `json:"New Value"`
-	NetGain       float64     `json:"Net Gain"`
-	Moves         []*Security `json:"Securities"`
-	NetChange     string      `json:"Net Change"`
 }
