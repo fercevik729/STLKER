@@ -37,7 +37,6 @@ func main() {
 	// Create subrouters and register handlers
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/portfolio/{name}", control.GetPortfolio)
-	getRouter.HandleFunc("/profit/{name}", control.GetProfits)
 	getRouter.HandleFunc("/info/{ticker}/{currency}", control.GetInfo)
 	getRouter.HandleFunc("/moreinfo/{ticker}", control.MoreInfo)
 
