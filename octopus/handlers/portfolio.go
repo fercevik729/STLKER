@@ -27,15 +27,17 @@ type Portfolio struct {
 
 type Security struct {
 	gorm.Model
-	SecurityID  int     `gorm:"primary_key"`
+	SecurityID  int     `gorm:"primary_key" json:"-"`
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
 	Shares      float64 `json:"Shares"`
+	Gain        float64 `json:"Gain"`
+	Change      string  `json:"Percent Change"`
 	// Currency is the destination currency of the stock
 	Currency string `json:"Currency" gorm:"default:USD"`
 	// Foreign key
-	PortfolioID uint
+	PortfolioID uint `json:"-"`
 }
 
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
@@ -233,41 +235,26 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 }
 
 type Profits struct {
-	OriginalValue float64      `json:"Original Value"`
-	NewValue      float64      `json:"New Value"`
-	NetGain       float64      `json:"Net Gain"`
-	Moves         []StockMoves `json:"Moves"`
-	NetChange     string       `json:"Net Change"`
-}
-
-type StockMoves struct {
-	Ticker      string  `json:"Ticker"`
-	BoughtPrice float64 `json:"Bought Price"`
-	CurrPrice   float64 `json:"Current Price"`
-	Gain        float64 `json:"Gain"`
-	Change      string  `json:"Percent Change"`
-	Shares      float64 `json:"Shares"`
+	OriginalValue float64     `json:"Original Value"`
+	NewValue      float64     `json:"New Value"`
+	NetGain       float64     `json:"Net Gain"`
+	Moves         []*Security `json:"Securities"`
+	NetChange     string      `json:"Net Change"`
 }
 
 func calcProfits(p *Portfolio) (*Profits, error) {
 	original := 0.
 	new := 0.
-	moves := make([]StockMoves, 0)
 	for _, sec := range p.Securities {
 
-		// Append the stock moves
-		diff, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
+		// Update the individual security's gains and percent changes
+		gain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
 		if err != nil {
 			return nil, err
 		}
-		moves = append(moves, StockMoves{
-			Ticker:      sec.Ticker,
-			BoughtPrice: sec.BoughtPrice,
-			CurrPrice:   sec.CurrPrice,
-			Gain:        diff,
-			Change:      fmt.Sprintf("%.2f%%", diff/sec.CurrPrice*100),
-			Shares:      sec.Shares,
-		})
+		sec.Gain = gain
+		sec.Change = fmt.Sprintf("%.2f%%", (gain)/sec.BoughtPrice*100)
+
 		original += sec.BoughtPrice * sec.Shares
 		new += sec.CurrPrice * sec.Shares
 	}
@@ -294,7 +281,7 @@ func calcProfits(p *Portfolio) (*Profits, error) {
 	return &Profits{
 		OriginalValue: original,
 		NewValue:      new,
-		Moves:         moves,
+		Moves:         p.Securities,
 		NetGain:       netGain,
 		NetChange:     percChange,
 	}, nil
