@@ -233,20 +233,46 @@ func (c *ControlHandler) updatePortfolio(port *Portfolio) {
 }
 
 type Profits struct {
-	OriginalValue float64 `json:"Original Value"`
-	NewValue      float64 `json:"New Value"`
-	Gains         float64 `json:"Gains"`
-	Change        string  `json:"Percent Change"`
+	OriginalValue float64      `json:"Original Value"`
+	NewValue      float64      `json:"New Value"`
+	NetGain       float64      `json:"Net Gain"`
+	Moves         []StockMoves `json:"Moves"`
+	NetChange     string       `json:"Net Change"`
+}
+
+type StockMoves struct {
+	Ticker      string  `json:"Ticker"`
+	BoughtPrice float64 `json:"Bought Price"`
+	CurrPrice   float64 `json:"Current Price"`
+	Gain        float64 `json:"Gain"`
+	Change      string  `json:"Percent Change"`
+	Shares      float64 `json:"Shares"`
 }
 
 func calcProfits(p *Portfolio) (*Profits, error) {
 	original := 0.
 	new := 0.
+	moves := make([]StockMoves, 0)
 	for _, sec := range p.Securities {
+
+		// Append the stock moves
+		diff, err := strconv.ParseFloat(fmt.Sprintf("%.2f", sec.CurrPrice-sec.BoughtPrice), 64)
+		if err != nil {
+			return nil, err
+		}
+		moves = append(moves, StockMoves{
+			Ticker:      sec.Ticker,
+			BoughtPrice: sec.BoughtPrice,
+			CurrPrice:   sec.CurrPrice,
+			Gain:        diff,
+			Change:      fmt.Sprintf("%.2f%%", diff/sec.CurrPrice*100),
+			Shares:      sec.Shares,
+		})
 		original += sec.BoughtPrice * sec.Shares
 		new += sec.CurrPrice * sec.Shares
 	}
 
+	// Round original and new
 	var err error
 	original, err = strconv.ParseFloat(fmt.Sprintf("%.2f", original), 64)
 	if err != nil {
@@ -261,14 +287,15 @@ func calcProfits(p *Portfolio) (*Profits, error) {
 	// Compute and round change and profits
 	percChange := fmt.Sprintf("%.2f%%", (new-original)/original*100)
 
-	gains, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
+	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
 	if err != nil {
 		return nil, err
 	}
 	return &Profits{
 		OriginalValue: original,
 		NewValue:      new,
-		Gains:         gains,
-		Change:        percChange,
+		Moves:         moves,
+		NetGain:       netGain,
+		NetChange:     percChange,
 	}, nil
 }
