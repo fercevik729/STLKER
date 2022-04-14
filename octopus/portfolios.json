@@ -2,12 +2,12 @@
     "Name": "Portfolio2",
     "Securities": [
         {
-            "Ticker": "F",
+            "Ticker": "V",
             "Bought Price": 12.50, 
             "Shares": 50
         },
         {
-            "Ticker": "GME",
+            "Ticker": "IBM",
             "Bought Price": 120.21,
             "Shares": 25
         },

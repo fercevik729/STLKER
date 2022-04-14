@@ -44,10 +44,10 @@ type Portfolio struct {
 
 type Profits struct {
 	OriginalValue float64     `json:"Original Value"`
-	NewValue      float64     `json:"New Value"`
+	NewValue      float64     `json:"Current Value"`
 	NetGain       float64     `json:"Net Gain"`
-	Moves         []*Security `json:"Securities"`
 	NetChange     string      `json:"Net Change"`
+	Moves         []*Security `json:"Securities"`
 }
 
 func (p *Portfolio) calcProfits() (*Profits, error) {
@@ -105,12 +105,14 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
 	}
 
 	// Get generic sql.DB object
 	sqlDB, err := db.DB()
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
+		return
 	}
 	defer sqlDB.Close()
 	// Migrate schema
@@ -122,7 +124,8 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// If a portfolio with that name does exist return an error
 	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
-		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
+		c.LogHTTPError(w, "A portfolio with that name already exists", http.StatusBadRequest)
+		return
 	}
 	// Retrieve prices for all stocks in the portfolio
 	c.l.Println("[INFO] Retrieving updated stock prices")
@@ -150,12 +153,14 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
 	}
 
 	// Get generic sql.DB object
 	sqlDB, err := db.DB()
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
+		return
 	}
 	defer sqlDB.Close()
 
@@ -173,6 +178,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	profits, err := port.calcProfits()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	data.ToJSON(profits, w)
 
@@ -190,8 +196,8 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't create sqlDB instance:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		c.LogHTTPError(w, "Couldn't create sql db instance", http.StatusInternalServerError)
+		return
 	}
 	defer sqlDB.Close()
 	var port Portfolio
@@ -213,12 +219,14 @@ func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) {
 	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
 	}
 
 	// Get generic sql.DB object
 	sqlDB, err := db.DB()
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
+		return
 	}
 	defer sqlDB.Close()
 

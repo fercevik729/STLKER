@@ -42,7 +42,8 @@ func main() {
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/portfolio", control.CreatePortfolio)
-	postRouter.HandleFunc("/portfolio/{name}", control.AddSecurity)
+	// Change to use json
+	postRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.AddSecurity)
 
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
