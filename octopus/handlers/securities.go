@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type Security struct {
 	STLKERModel
-	SecurityID  int     `gorm:"primary_key"`
+	SecurityID  int     `gorm:"primary_key" json:"-"`
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
@@ -21,7 +22,7 @@ type Security struct {
 	// Currency is the destination currency of the stock
 	Currency string `json:"Currency" gorm:"default:USD"`
 	// Foreign key
-	PortfolioID uint
+	PortfolioID uint `json:"-"`
 }
 
 func (s *Security) setMoves(gain float64, change string) {
@@ -34,19 +35,16 @@ func NewDBConn(databaseName string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return sqliteDatabase, nil
 
 }
 
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker := c.getSecurityVars("Delete Security", r)
-
 	// Connect to database
 	db, err := NewDBConn("portfolios.db")
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't connect to database:", err)
-		return
+		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 	}
 	defer db.Close()
 	// Get portfolio with the name specified by the mux variable
@@ -59,6 +57,7 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't prepare delete query string", http.StatusInternalServerError)
 	}
+	// Execute the query
 	res, err := stmt.Exec(ticker, portId)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't execute delete query", http.StatusInternalServerError)
@@ -67,7 +66,20 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't retrieve affected rows", http.StatusInternalServerError)
 	}
-	c.l.Printf("[DEBUG] Deleted %d rows\n", affected)
+	// Write a response to the client to tell them if the security was there in the first place
+	if affected > 0 {
+		msg := fmt.Sprintf("Deleted %d rows\n", affected)
+		c.l.Printf("[DEBUG] %s\n", msg)
+
+		w.Header().Set("Content-Type", "application/json")
+		data.ToJSON(msg, w)
+	}
+	msg := fmt.Sprintf("%s did not have security: %s", portName, ticker)
+	c.l.Printf("[DEBUG] %s\n", msg)
+	w.Header().Set("Content-Type", "application/json")
+	data.ToJSON(&ResponseMessage{
+		Msg: msg,
+	}, w)
 }
 
 func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +87,48 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
-	//portName, ticker := c.getSecurityVars("Edit Security", r)
+	// Get URI vars
+	portName, ticker := c.getSecurityVars("Edit Security", r)
+	shares := mux.Vars(r)["shares"]
+
+	// Create sql db instance
+	db, err := NewDBConn("portfolios.db")
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+	}
+	defer db.Close()
+
+	// Get portfolio id
+	portId, err := getPortfolioId(db, portName)
+	if err != nil {
+		c.LogHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
+	}
+	stmt, err := db.Prepare(`UPDATE securities SET shares=? WHERE ticker=? AND portfolio_id=?`)
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't prepare update query string", http.StatusInternalServerError)
+	}
+	res, err := stmt.Exec(shares, ticker, portId)
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't execute update query", http.StatusInternalServerError)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't retrieve affected rows", http.StatusInternalServerError)
+	}
+	// Write a response to the client to tell them if the security was there in the first place
+	if affected > 0 {
+		msg := fmt.Sprintf("Updated %d rows\n", affected)
+		c.l.Printf("[DEBUG] %s\n", msg)
+
+		w.Header().Set("Content-Type", "application/json")
+		data.ToJSON(msg, w)
+	}
+	msg := fmt.Sprintf("%s did not have security: %s", portName, ticker)
+	c.l.Printf("[DEBUG] %s\n", msg)
+	w.Header().Set("Content-Type", "application/json")
+	data.ToJSON(&ResponseMessage{
+		Msg: msg,
+	}, w)
 
 }
 

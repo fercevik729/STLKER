@@ -45,7 +45,7 @@ func main() {
 	postRouter.HandleFunc("/portfolio/{name}", control.AddSecurity)
 
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/portfolio/{name}/{ticker}", control.EditSecurity)
+	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
 
 	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/portfolio/{name}", control.DeletePortfolio)

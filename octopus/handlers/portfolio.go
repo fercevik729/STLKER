@@ -16,8 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
+func (c *ControlHandler) LogHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
+	c.l.Printf("[ERROR] %s\n", errorMsg)
+	http.Error(w, errorMsg, errorCode)
+}
+
+type ResponseMessage struct {
+	Msg string `json:"Message"`
+}
+
 type STLKERModel struct {
-	ID        uint         `gorm:"primaryKey"`
+	ID        uint         `gorm:"primaryKey" json:"-"`
 	CreatedAt time.Time    `json:"-"`
 	UpdatedAt time.Time    `json:"-"`
 	DeletedAt sql.NullTime `json:"-" gorm:"index"`
@@ -80,11 +89,6 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 	}, nil
 }
 
-func (c *ControlHandler) LogHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
-	c.l.Printf("[ERROR] %s\n", errorMsg)
-	http.Error(w, errorMsg, errorCode)
-}
-
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Create Portfolio")
 	// Retrieve the portfolio from the request body
@@ -108,6 +112,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
 	}
+	defer sqlDB.Close()
 	// Migrate schema
 	db.AutoMigrate(&Portfolio{}, &Security{})
 
@@ -125,10 +130,14 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// Create portfolio entry
 	db.Create(&reqPort)
-	c.l.Println("[DEBUG] Created portfolio named", reqPort.Name)
+	msg := fmt.Sprintf("Created portfolio named %s", reqPort.Name)
+	c.l.Printf("[DEBUG] %s", msg)
 
-	// Close database connection
-	sqlDB.Close()
+	// Write to response body
+	w.WriteHeader(http.StatusCreated)
+	data.ToJSON(&ResponseMessage{
+		Msg: msg,
+	}, w)
 
 }
 
@@ -189,6 +198,10 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// Delete portfolio
 	db.Model(port).Where("name = ?", name).Delete(&port)
+
+	data.ToJSON(&ResponseMessage{
+		Msg: fmt.Sprintf("Deleted portfolio %s", name),
+	}, w)
 }
 
 func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) {
