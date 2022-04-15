@@ -23,9 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WatcherClient interface {
 	GetInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerResponse, error)
-	SubscribeTicker(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (Watcher_SubscribeTickerClient, error)
 	MoreInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*CompanyResponse, error)
-	Echo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerRequest, error)
 }
 
 type watcherClient struct {
@@ -45,50 +43,9 @@ func (c *watcherClient) GetInfo(ctx context.Context, in *TickerRequest, opts ...
 	return out, nil
 }
 
-func (c *watcherClient) SubscribeTicker(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (Watcher_SubscribeTickerClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Watcher_ServiceDesc.Streams[0], "/Watcher/SubscribeTicker", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &watcherSubscribeTickerClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Watcher_SubscribeTickerClient interface {
-	Recv() (*PriceResponse, error)
-	grpc.ClientStream
-}
-
-type watcherSubscribeTickerClient struct {
-	grpc.ClientStream
-}
-
-func (x *watcherSubscribeTickerClient) Recv() (*PriceResponse, error) {
-	m := new(PriceResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *watcherClient) MoreInfo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*CompanyResponse, error) {
 	out := new(CompanyResponse)
 	err := c.cc.Invoke(ctx, "/Watcher/MoreInfo", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *watcherClient) Echo(ctx context.Context, in *TickerRequest, opts ...grpc.CallOption) (*TickerRequest, error) {
-	out := new(TickerRequest)
-	err := c.cc.Invoke(ctx, "/Watcher/Echo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +57,7 @@ func (c *watcherClient) Echo(ctx context.Context, in *TickerRequest, opts ...grp
 // for forward compatibility
 type WatcherServer interface {
 	GetInfo(context.Context, *TickerRequest) (*TickerResponse, error)
-	SubscribeTicker(*TickerRequest, Watcher_SubscribeTickerServer) error
 	MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error)
-	Echo(context.Context, *TickerRequest) (*TickerRequest, error)
 	mustEmbedUnimplementedWatcherServer()
 }
 
@@ -113,14 +68,8 @@ type UnimplementedWatcherServer struct {
 func (UnimplementedWatcherServer) GetInfo(context.Context, *TickerRequest) (*TickerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
 }
-func (UnimplementedWatcherServer) SubscribeTicker(*TickerRequest, Watcher_SubscribeTickerServer) error {
-	return status.Errorf(codes.Unimplemented, "method SubscribeTicker not implemented")
-}
 func (UnimplementedWatcherServer) MoreInfo(context.Context, *TickerRequest) (*CompanyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MoreInfo not implemented")
-}
-func (UnimplementedWatcherServer) Echo(context.Context, *TickerRequest) (*TickerRequest, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Echo not implemented")
 }
 func (UnimplementedWatcherServer) mustEmbedUnimplementedWatcherServer() {}
 
@@ -153,27 +102,6 @@ func _Watcher_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Watcher_SubscribeTicker_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(TickerRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(WatcherServer).SubscribeTicker(m, &watcherSubscribeTickerServer{stream})
-}
-
-type Watcher_SubscribeTickerServer interface {
-	Send(*PriceResponse) error
-	grpc.ServerStream
-}
-
-type watcherSubscribeTickerServer struct {
-	grpc.ServerStream
-}
-
-func (x *watcherSubscribeTickerServer) Send(m *PriceResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
 func _Watcher_MoreInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(TickerRequest)
 	if err := dec(in); err != nil {
@@ -188,24 +116,6 @@ func _Watcher_MoreInfo_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(WatcherServer).MoreInfo(ctx, req.(*TickerRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Watcher_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TickerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(WatcherServer).Echo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Watcher/Echo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WatcherServer).Echo(ctx, req.(*TickerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -225,17 +135,7 @@ var Watcher_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "MoreInfo",
 			Handler:    _Watcher_MoreInfo_Handler,
 		},
-		{
-			MethodName: "Echo",
-			Handler:    _Watcher_Echo_Handler,
-		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "SubscribeTicker",
-			Handler:       _Watcher_SubscribeTicker_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "protos/watcher.proto",
 }

@@ -1,0 +1,20 @@
+{
+    "Name": "Portfolio2",
+    "Securities": [
+        {
+            "Ticker": "V",
+            "Bought Price": 12.50, 
+            "Shares": 50
+        },
+        {
+            "Ticker": "IBM",
+            "Bought Price": 120.21,
+            "Shares": 25
+        },
+        {
+            "Ticker": "BAC",
+            "Bought Price": 5.07,
+            "Shares": 1000
+        }
+    ]
+}

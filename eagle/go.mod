@@ -1,4 +1,4 @@
-module github.com/fercevik729/STLKER/watcher-api
+module github.com/fercevik729/STLKER/eagle
 
 go 1.17
 

@@ -4,9 +4,7 @@ option go_package = "github.com/fercevik729/STLKER/watcher-api/protos";
 
 service Watcher {
 	rpc GetInfo(TickerRequest) returns (TickerResponse);
-	rpc SubscribeTicker(TickerRequest) returns (stream PriceResponse);
 	rpc MoreInfo(TickerRequest) returns (CompanyResponse);
-	rpc Echo(TickerRequest) returns (TickerRequest);
 }
 
 message TickerRequest {
@@ -22,35 +20,29 @@ message TickerResponse {
 	string Low = 4;
 	string Price = 5;
 	string Volume = 6;
-    	string LTD = 7;
+  string LTD = 7;
 	string PrevClose = 8;
 	string Change = 9;
 	string PercentChange = 10;
 }
 
 message CompanyResponse {
-    string Ticker = 1;
-    string Name = 2;
-    string Exchange = 3;
-    string Sector = 4;
-    string MarketCap = 5;
-    string PERatio = 6;
-    string PEGRatio = 7;
-    string DivPerShare = 8;
-    string EPS = 9;
-    string RevPerShare = 10;
-    string ProfitMargin = 11;
-    string YearHigh = 12;
-    string YearLow = 13;
-    string SharesOutstanding = 14;
-    string PriceToBookRatio = 15;
-    string Beta = 16;
-}
-
-message PriceResponse {
-    string Ticker = 1;
-    double StockPrice = 2;
-    string Currency = 3;
+  string Ticker = 1;
+  string Name = 2;
+  string Exchange = 3;
+  string Sector = 4;
+  string MarketCap = 5;
+  string PERatio = 6;
+  string PEGRatio = 7;
+  string DivPerShare = 8;
+  string EPS = 9;
+  string RevPerShare = 10;
+  string ProfitMargin = 11;
+  string YearHigh = 12;
+  string YearLow = 13;
+  string SharesOutstanding = 14;
+  string PriceToBookRatio = 15;
+  string Beta = 16;
 }
 
 // Currencies is the enum which represents the allowed currencies for the API

@@ -9,8 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fercevik729/STLKER/control-api/data"
-	"github.com/fercevik729/STLKER/control-api/handlers"
+	"github.com/fercevik729/STLKER/octopus/handlers"
 	p "github.com/fercevik729/STLKER/watcher-api/protos"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -22,7 +21,7 @@ func main() {
 	l := log.New(os.Stdout, "control-api", log.LstdFlags)
 
 	// Dial gRPC server
-	conn, err := grpc.Dial(":9092", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Println("[ERROR] dialing gRPC server")
 		panic(err)
@@ -30,23 +29,29 @@ func main() {
 	defer conn.Close()
 	// Create watcher client
 	wc := p.NewWatcherClient(conn)
-	// Create stock prices database instance
-	spdb := data.NewStockPricesDB(wc, l)
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, spdb)
+	control := handlers.NewControlHandler(l, wc)
 
-	// Register handlers
-	// TODO: add destination currency parameters
-	sm.HandleFunc("/info", control.GetInfo).Queries("ticker", "{ticker:[A-Z]+}")
-	sm.HandleFunc("/moreinfo", control.MoreInfo).Queries("ticker", "{ticker:[A-Z]+}")
-	sm.HandleFunc("/sub", control.SubscribeTicker).Queries("ticker", "{ticker:[A-Z]+}")
-	//sm.Path("/info").Queries("ticker", "{[A-Z]+}", "dest", "{[A-Z]{3}").HandlerFunc(control.GetInfo)
-	//sm.Path("/moreinfo").Queries("ticker", "{[A-Z]+}").HandlerFunc(control.GetInfo)
-	//sm.Path("/sub").Queries("ticker", "{[A-Z]+}", "dest", "{[A-Z]{3}").HandlerFunc(control.SubscribeTicker)
+	// Create subrouters and register handlers
+	getRouter := sm.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/portfolio/{name}", control.GetPortfolio)
+	getRouter.HandleFunc("/info/{ticker}/{currency}", control.GetInfo)
+	getRouter.HandleFunc("/moreinfo/{ticker}", control.MoreInfo)
 
-	// CORS for Vuejs UI
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/portfolio", control.CreatePortfolio)
+	postRouter.HandleFunc("/portfolio/{name}", control.AddSecurity)
+
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
+
+	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
+	deleteRouter.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+
+	// CORS for UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
 
 	// Create server

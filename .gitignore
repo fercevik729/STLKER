@@ -5,3 +5,4 @@ package-lock.json
 package.json
 static/build
 key.txt
+*.db

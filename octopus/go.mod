@@ -1,10 +1,21 @@
-module github.com/fercevik729/STLKER/control-api
+module github.com/fercevik729/STLKER/octopus
 
 go 1.17
 
 require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+)
+
+require (
+	github.com/Masterminds/squirrel v1.5.2 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.12 // indirect
+	gorm.io/driver/sqlite v1.3.1 // indirect
+	gorm.io/gorm v1.23.4 // indirect
 )
 
 require (
