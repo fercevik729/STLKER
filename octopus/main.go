@@ -35,6 +35,7 @@ func main() {
 	control := handlers.NewControlHandler(l, wc)
 
 	// Create subrouters and register handlers
+	// TODO: Add middleware for authentication and logging
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/portfolio/{name}", control.GetPortfolio)
 	getRouter.HandleFunc("/info/{ticker}/{currency}", control.GetInfo)
@@ -46,6 +47,7 @@ func main() {
 
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
+	putRouter.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
 
 	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/portfolio/{name}", control.DeletePortfolio)

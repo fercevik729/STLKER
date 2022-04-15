@@ -167,9 +167,12 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	var port Portfolio
 	// Check if a portfolio with that name already exists
 	db.Where("name = ?", name).Preload("Securities").Find(&port)
-	// Check if portfolio is empty
-	if reflect.DeepEqual(port, Portfolio{}) {
+	// Check if any results were found
+	if port.ID == 0 {
 		c.l.Println("[DEBUG] No results found")
+		data.ToJSON(&ResponseMessage{
+			Msg: fmt.Sprintf("A portfolio with name %s could not be found", name),
+		}, w)
 		return
 	}
 	// Update the database entry with the new prices
@@ -200,16 +203,79 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	defer sqlDB.Close()
-	var port Portfolio
 
-	// Delete portfolio
-	db.Model(port).Where("name = ?", name).Delete(&port)
+	// Delete portfolio and all child securities
+	var (
+		sec  Security
+		port Portfolio
+	)
+	// Update the portfolio in the db
+	db.Model(port).Where("name=?", name).Find(&port)
+	// Check if any results were found
+	if port.ID == 0 {
+		c.l.Println("[DEBUG] No results found")
+		data.ToJSON(&ResponseMessage{
+			Msg: fmt.Sprintf("A portfolio with name %s could not be found", name),
+		}, w)
+		return
+	}
+	db.Model(sec).Where("portfolio_id=?", port.ID).Delete(&sec)
+	db.Model(port).Delete(&port)
 
 	data.ToJSON(&ResponseMessage{
 		Msg: fmt.Sprintf("Deleted portfolio %s", name),
 	}, w)
 }
 
+func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	// Retrieve the portfolio from the request body
+	reqPort := Portfolio{}
+	data.FromJSON(&reqPort, r.Body)
+
+	c.l.Println("[INFO] Handle Update Portfolio for:", name)
+
+	// Open sqlite db connection
+	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+
+	// Get generic sql.DB object
+	sqlDB, err := db.DB()
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
+		return
+	}
+	defer sqlDB.Close()
+
+	var (
+		sqlPort Portfolio
+		sec     Security
+	)
+	// Find the portfolio in the db
+	db.Model(sqlPort).Where("name=?", name).Find(&sqlPort)
+	// Check if any results were found
+	if sqlPort.ID == 0 {
+		c.l.Println("[DEBUG] No results found")
+		data.ToJSON(&ResponseMessage{
+			Msg: fmt.Sprintf("A portfolio with name %s could not be found", name),
+		}, w)
+		return
+	}
+	//Delete previous portfolio
+	db.Model(sec).Where("portfolio_id=?", sqlPort.ID).Delete(&sec)
+	db.Model(sqlPort).Delete(&sqlPort)
+	// Create new one
+	db.Create(&reqPort)
+
+	msg := fmt.Sprintf("Updated portfolio with name %s", name)
+	data.ToJSON(&ResponseMessage{
+		Msg: msg,
+	}, w)
+
+}
 func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) {
 	// Update prices using gRPC API
 	c.updatePrices(port)
@@ -242,6 +308,7 @@ func (c *ControlHandler) updatePrices(port *Portfolio) {
 	for _, sec := range port.Securities {
 		wg.Add(1)
 		go func(s *Security) {
+			defer wg.Done()
 			// Get security information using Info method defined in driver.go
 			st, err := Info(s.Ticker, s.Currency, c.client)
 			if err != nil {
@@ -251,7 +318,7 @@ func (c *ControlHandler) updatePrices(port *Portfolio) {
 			// Parse the stock price
 			price, err := strconv.ParseFloat(st.Price, 64)
 			if err != nil {
-				c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker)
+				c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker, "price:", st.Price)
 				return
 			}
 			// Set stock price in target currency (USD by default)
@@ -265,7 +332,6 @@ func (c *ControlHandler) updatePrices(port *Portfolio) {
 			gain, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", (s.CurrPrice-s.BoughtPrice)*s.Shares), 64)
 			s.setMoves(gain, fmt.Sprintf("%.2f%%", (s.CurrPrice-s.BoughtPrice)/s.BoughtPrice*100))
 
-			wg.Done()
 		}(sec)
 	}
 	wg.Wait()
