@@ -92,8 +92,18 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 
 func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker := c.getSecurityVars("Edit Security", r)
-	shares := mux.Vars(r)["shares"]
+	portName := mux.Vars(r)["name"]
+
+	// Get ticker and shares info from JSON body
+	type securityData struct {
+		Ticker string  `json:"Ticker"`
+		Shares float64 `json:"Shares"`
+	}
+	var params securityData
+	data.FromJSON(&params, r.Body)
+
+	ticker := params.Ticker
+	shares := params.Shares
 
 	// Create sql db instance
 	db, err := NewDBConn("portfolios.db")
