@@ -16,6 +16,23 @@ import (
 	"gorm.io/gorm"
 )
 
+func NewGormDBConn(databaseName string) (*gorm.DB, error) {
+	db, err := gorm.Open(sqlite.Open(databaseName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+
+}
+
+func NewSqlDBConn(databaseName string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", databaseName)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 func (c *ControlHandler) LogHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
 	c.l.Printf("[ERROR] %s\n", errorMsg)
 	http.Error(w, errorMsg, errorCode)
@@ -102,19 +119,11 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Open sqlite db connection
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	db, err := NewGormDBConn("portfolios.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
-
-	// Get generic sql.DB object
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
-		return
-	}
-	defer sqlDB.Close()
 	// Migrate schema
 	db.AutoMigrate(&Portfolio{}, &Security{})
 
@@ -150,19 +159,11 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Get Portfolio for:", name)
 
 	// Open sqlite db connection
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	db, err := NewGormDBConn("portfolios.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
-
-	// Get generic sql.DB object
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
-		return
-	}
-	defer sqlDB.Close()
 
 	var port Portfolio
 	// Check if a portfolio with that name already exists
@@ -187,22 +188,59 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	// Retrieve the portfolio from the request body
+	reqPort := Portfolio{}
+	data.FromJSON(&reqPort, r.Body)
+
+	c.l.Println("[INFO] Handle Update Portfolio for:", name)
+
+	// Open sqlite db connection
+	db, err := NewGormDBConn("portfolios.db")
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+
+	// Declare target variables
+	var (
+		sqlPort Portfolio
+		sec     Security
+	)
+	// Find the portfolio in the db
+	db.Model(sqlPort).Where("name=?", name).Find(&sqlPort)
+	// Check if any results were found
+	if sqlPort.ID == 0 {
+		c.l.Println("[DEBUG] No results found for name:", name)
+		data.ToJSON(&ResponseMessage{
+			Msg: fmt.Sprintf("A portfolio with name %s could not be found", name),
+		}, w)
+		return
+	}
+	//Delete previous portfolio
+	db.Model(sec).Where("portfolio_id=?", sqlPort.ID).Delete(&sec)
+	db.Model(sqlPort).Delete(&sqlPort)
+	// Create new one
+	db.Create(&reqPort)
+
+	// Send response message
+	msg := fmt.Sprintf("Updated portfolio with name %s", name)
+	data.ToJSON(&ResponseMessage{
+		Msg: msg,
+	}, w)
+
+}
+
 func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	c.l.Println("[INFO] Handle Delete Portfolio for:", name)
 
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	db, err := NewGormDBConn("portfolios.db")
 	if err != nil {
 		c.l.Println("[ERROR] Couldn't connect to database")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't create sql db instance", http.StatusInternalServerError)
-		return
-	}
-	defer sqlDB.Close()
 
 	// Delete portfolio and all child securities
 	var (
@@ -227,78 +265,21 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 	}, w)
 }
 
-func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-	// Retrieve the portfolio from the request body
-	reqPort := Portfolio{}
-	data.FromJSON(&reqPort, r.Body)
-
-	c.l.Println("[INFO] Handle Update Portfolio for:", name)
-
-	// Open sqlite db connection
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-
-	// Get generic sql.DB object
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
-		return
-	}
-	defer sqlDB.Close()
-
-	var (
-		sqlPort Portfolio
-		sec     Security
-	)
-	// Find the portfolio in the db
-	db.Model(sqlPort).Where("name=?", name).Find(&sqlPort)
-	// Check if any results were found
-	if sqlPort.ID == 0 {
-		c.l.Println("[DEBUG] No results found")
-		data.ToJSON(&ResponseMessage{
-			Msg: fmt.Sprintf("A portfolio with name %s could not be found", name),
-		}, w)
-		return
-	}
-	//Delete previous portfolio
-	db.Model(sec).Where("portfolio_id=?", sqlPort.ID).Delete(&sec)
-	db.Model(sqlPort).Delete(&sqlPort)
-	// Create new one
-	db.Create(&reqPort)
-
-	msg := fmt.Sprintf("Updated portfolio with name %s", name)
-	data.ToJSON(&ResponseMessage{
-		Msg: msg,
-	}, w)
-
-}
 func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) {
 	// Update prices using gRPC API
 	c.updatePrices(port)
 
 	// Update database entry using GORM
 	// Open sqlite db connection
-	db, err := gorm.Open(sqlite.Open("portfolios.db"), &gorm.Config{})
+	db, err := NewGormDBConn("portfolios.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 
-	// Get generic sql.DB object
-	sqlDB, err := db.DB()
-	if err != nil {
-		c.LogHTTPError(w, "Couldn't create sql instance", http.StatusInternalServerError)
-		return
-	}
-	defer sqlDB.Close()
-
-	// Update associations
+	// Update associations for said portfolio
 	var dbPort Portfolio
-	db.Model(&dbPort).Association("Securities").Replace(&port.Securities)
+	db.Model(&dbPort).Where("id=?", port.ID).Association("Securities").Replace(&port.Securities)
 
 }
 
@@ -308,30 +289,8 @@ func (c *ControlHandler) updatePrices(port *Portfolio) {
 	for _, sec := range port.Securities {
 		wg.Add(1)
 		go func(s *Security) {
-			defer wg.Done()
-			// Get security information using Info method defined in driver.go
-			st, err := Info(s.Ticker, s.Currency, c.client)
-			if err != nil {
-				c.l.Println("[ERROR] Couldn't get info for ticker:", s.Ticker)
-				return
-			}
-			// Parse the stock price
-			price, err := strconv.ParseFloat(st.Price, 64)
-			if err != nil {
-				c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker, "price:", st.Price)
-				return
-			}
-			// Set stock price in target currency (USD by default)
-			if s.Currency == "" {
-				s.Currency = "USD"
-			}
-			c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.Currency)
-			s.CurrPrice = price
-
-			// Update the individual security's gains and percent changes
-			gain, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", (s.CurrPrice-s.BoughtPrice)*s.Shares), 64)
-			s.setMoves(gain, fmt.Sprintf("%.2f%%", (s.CurrPrice-s.BoughtPrice)/s.BoughtPrice*100))
-
+			c.updateSecurities(s)
+			wg.Done()
 		}(sec)
 	}
 	wg.Wait()
