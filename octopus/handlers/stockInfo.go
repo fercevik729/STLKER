@@ -1,27 +1,11 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/fercevik729/STLKER/octopus/data"
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
 	"github.com/gorilla/mux"
 )
-
-// ControlHandler is a http.Handler
-type ControlHandler struct {
-	l      *log.Logger
-	client pb.WatcherClient
-}
-
-// NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger, wc pb.WatcherClient) *ControlHandler {
-	return &ControlHandler{
-		l:      log,
-		client: wc,
-	}
-}
 
 func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 

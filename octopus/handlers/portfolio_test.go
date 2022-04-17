@@ -1,99 +1,127 @@
 package handlers_test
 
 import (
-	"fmt"
+	"bytes"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/fercevik729/STLKER/octopus/handlers"
+	"github.com/fercevik729/STLKER/watcher-api/protos"
+	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestCreatePortfolio(t *testing.T) {
-	// Open sqlite db connection
-	db, err := handlers.NewGormDBConn("../portfolios.db")
+	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "T","Bought Price":12.50,"Shares":50},{"Ticker":"TSLA","Bought Price":120.21,"Shares":25},{"Ticker": "AMC","Bought Price":5.07,"Shares":1000}]}}`)
+	req, err := http.NewRequest("POST", "/portfolio", bytes.NewBuffer(jsonStr))
 	if err != nil {
-		t.Error("couldn't connect to database")
+		t.Error("couldn't create post request to create a new portfolio:", err)
 	}
-	db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{})
+	req.Header.Set("Content-Type", "application/json")
 
-	Port1 := handlers.Portfolio{
-		Name: "CollegeFund",
-		Securities: []*handlers.Security{
-			{
-				Ticker:      "SPY",
-				BoughtPrice: 121.98,
-				Shares:      10,
-			},
-			{
-				Ticker:      "TSLA",
-				BoughtPrice: 130.12,
-				Shares:      50,
-			},
-		},
+	// Create http recorder
+	rr := httptest.NewRecorder()
+	// Dial gRPC server
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Println("[ERROR] dialing gRPC server")
+		panic(err)
 	}
-	db.Create(&Port1)
-	portfolio := &handlers.Portfolio{}
+	defer conn.Close()
+	// Create a handler to listen for incoming requests
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	handler := http.HandlerFunc(control.CreatePortfolio)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want 201",
+			status)
+	}
 
-	db.Where("name=?", "CollegeFund").Preload("Securities").Find(&portfolio)
-
-	if len(portfolio.Securities) < 2 {
-		t.Errorf("Expected 2 securities got %d\n", len(portfolio.Securities))
+	// Check response message
+	expected := `{"Message":"Created portfolio named CollegeFund"}`
+	if !strings.Contains(rr.Body.String(), expected) {
+		t.Errorf("expected %v got %v", expected, rr.Body.String())
 	}
 
 }
 
 func TestGetPortfolio(t *testing.T) {
-	// Open sqlite db connection
-	db, err := handlers.NewGormDBConn("../portfolios.db")
+	expectedStr := `{"Original Value":`
+	req, err := http.NewRequest("GET", "/portfolio/CollegeFund", nil)
 	if err != nil {
-		t.Error("couldn't connect to database")
+		t.Error("couldn't create get request for CollegeFund")
 	}
-	expPort := handlers.Portfolio{
-		Name: "CollegeFund",
-		Securities: []*handlers.Security{
-			{
-				Ticker:      "SPY",
-				BoughtPrice: 121.98,
-				Shares:      10,
-			},
-			{
-				Ticker:      "TSLA",
-				BoughtPrice: 130.12,
-				Shares:      50,
-			},
-		},
+	// Set mux URL variables
+	vars := map[string]string{
+		"name": "CollegeFund",
 	}
-	var dbPort handlers.Portfolio
-	db.Where("name=?", "CollegeFund").Preload("Securities").Find(&dbPort)
+	req = mux.SetURLVars(req, vars)
 
-	// Make sure the number of securities matches
-	if len(dbPort.Securities) != len(expPort.Securities) {
-		fmt.Printf("%#v\n", dbPort.Securities[0])
-		t.Error("Did not receive expected portfolio from database")
+	// Create http recorder
+	rr := httptest.NewRecorder()
+	// Dial gRPC server
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Println("[ERROR] dialing gRPC server")
+		panic(err)
+	}
+	defer conn.Close()
+	// Create a handler to listen for incoming requests
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	handler := http.HandlerFunc(control.GetPortfolio)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want 200",
+			status)
+	}
+
+	// Check response message
+	if !strings.Contains(rr.Body.String(), string(expectedStr)) {
+		t.Errorf("expected %v got %v", expectedStr, rr.Body.String())
 	}
 }
 
+func TestUpdatePortfolio(t *testing.T) {
+
+}
+
 func TestDeletePortfolio(t *testing.T) {
-	// Open db conn
-	db, err := handlers.NewGormDBConn("../portfolios.db")
+	expectedStr := `{"Message":"Deleted portfolio CollegeFund"}`
+	req, err := http.NewRequest("DELETE", "/portfolio/CollegeFund", nil)
 	if err != nil {
-		t.Error("couldn't connect to database")
+		t.Error("couldn't create delete request:", err)
 	}
-	var (
-		sec  handlers.Security
-		port handlers.Portfolio
-	)
+	// Set mux URL variables
+	vars := map[string]string{
+		"name": "CollegeFund",
+	}
+	req = mux.SetURLVars(req, vars)
 
-	name := "CollegeFund"
+	// Create http recorder
+	rr := httptest.NewRecorder()
+	// Dial gRPC server
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Println("[ERROR] dialing gRPC server")
+		panic(err)
+	}
+	defer conn.Close()
+	// Create a handler to listen for incoming requests
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	handler := http.HandlerFunc(control.DeletePortfolio)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want 200",
+			status)
+	}
 
-	// Delete portfolio and underlying securities
-	db.Model(port).Where("name=?", name).Find(&port)
-	db.Model(sec).Where("portfolio_id=?", port.ID).Delete(&sec)
-	db.Model(port).Delete(&port)
-
-	// Check if deletion worked
-	db.Where("name=?", name).Preload("Securities").Find(&port)
-	if len(port.Securities) != 0 {
-		t.Errorf("Expected no securities got %d\n", len(port.Securities))
+	// Check response message
+	if !strings.Contains(rr.Body.String(), string(expectedStr)) {
+		t.Errorf("expected %v got %v", expectedStr, rr.Body.String())
 	}
 }
 
