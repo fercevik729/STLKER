@@ -86,6 +86,41 @@ func TestGetPortfolio(t *testing.T) {
 }
 
 func TestUpdatePortfolio(t *testing.T) {
+	// Create request and json body
+	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "V","Bought Price":12.50,"Shares":50},{"Ticker":"GME","Bought Price":120.21,"Shares":25},{"Ticker": "ZM","Bought Price":5.07,"Shares":1000}]}}`)
+	req, err := http.NewRequest("PUT", "/portfolio/CollegeFund", bytes.NewBuffer(jsonStr))
+	if err != nil {
+		t.Error("couldn't create put request for portfolio College Fund")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	vars := map[string]string{
+		"name": "CollegeFund",
+	}
+	req = mux.SetURLVars(req, vars)
+	// Create http recorder
+	rr := httptest.NewRecorder()
+	// Dial gRPC server
+	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Println("[ERROR] dialing gRPC server")
+		panic(err)
+	}
+	defer conn.Close()
+	// Create a handler to listen for incoming requests
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	handler := http.HandlerFunc(control.UpdatePortfolio)
+	handler.ServeHTTP(rr, req)
+	// Check status
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want 200",
+			status)
+	}
+
+	expStr := `{"Message":"Updated portfolio with name CollegeFund"}`
+	// Check response body
+	if !strings.Contains(rr.Body.String(), expStr) {
+		t.Errorf("expected %s got %s", expStr, rr.Body.String())
+	}
 
 }
 
