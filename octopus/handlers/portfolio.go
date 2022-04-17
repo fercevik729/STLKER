@@ -119,7 +119,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn("portfolios.db")
+	db, err := NewGormDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -159,7 +159,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Get Portfolio for:", name)
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn("portfolios.db")
+	db, err := NewGormDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -197,7 +197,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	c.l.Println("[INFO] Handle Update Portfolio for:", name)
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn("portfolios.db")
+	db, err := NewGormDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -236,7 +236,7 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 	name := mux.Vars(r)["name"]
 	c.l.Println("[INFO] Handle Delete Portfolio for:", name)
 
-	db, err := NewGormDBConn("portfolios.db")
+	db, err := NewGormDBConn("stlker.db")
 	if err != nil {
 		c.l.Println("[ERROR] Couldn't connect to database")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -271,7 +271,7 @@ func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) {
 
 	// Update database entry using GORM
 	// Open sqlite db connection
-	db, err := NewGormDBConn("portfolios.db")
+	db, err := NewGormDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return

@@ -74,7 +74,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	shares := params.Shares
 
 	// Create sql db instance
-	db, err := NewSqlDBConn("portfolios.db")
+	db, err := NewSqlDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 	}
@@ -116,7 +116,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName, ticker := c.getSecurityVars("Read Security", r)
-	db, err := NewSqlDBConn("portfolios.db")
+	db, err := NewSqlDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connct to database", http.StatusInternalServerError)
 		return
@@ -168,7 +168,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 	shares := mux.Vars(r)["shares"]
 
 	// Create sql db instance
-	db, err := NewSqlDBConn("portfolios.db")
+	db, err := NewSqlDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -218,7 +218,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker := c.getSecurityVars("Delete Security", r)
 	// Connect to database
-	db, err := NewSqlDBConn("portfolios.db")
+	db, err := NewSqlDBConn("stlker.db")
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
