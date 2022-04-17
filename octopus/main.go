@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/handlers"
+	mw "github.com/fercevik729/STLKER/octopus/middleware"
 	p "github.com/fercevik729/STLKER/watcher-api/protos"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -33,25 +34,8 @@ func main() {
 	sm := mux.NewRouter()
 	// Create handlers
 	control := handlers.NewControlHandler(l, wc)
-
-	// Create subrouters and register handlers
-	// TODO: Add middleware for authentication and logging
-	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/portfolio/{name}", control.GetPortfolio)
-	getRouter.HandleFunc("/info/{ticker}/{currency}", control.GetInfo)
-	getRouter.HandleFunc("/moreinfo/{ticker}", control.MoreInfo)
-
-	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/portfolio", control.CreatePortfolio)
-	postRouter.HandleFunc("/portfolio/{name}", control.AddSecurity)
-
-	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
-	putRouter.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
-
-	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
-	deleteRouter.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+	// Register routes
+	registerRoutes(sm, control)
 
 	// CORS for UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
@@ -89,5 +73,37 @@ func main() {
 	if err != nil {
 		l.Println("Tried shutting down, but got this error:", err)
 	}
+
+}
+
+func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
+	// Create subrouters and register handlers
+
+	getR := sm.Methods(http.MethodGet).Subrouter()
+	getR.HandleFunc("/portfolio/{name}", control.GetPortfolio)
+	getR.Use(mw.Authenticate)
+
+	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
+	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")
+
+	postR := sm.Methods(http.MethodPost).Subrouter()
+	postR.HandleFunc("/portfolio", control.CreatePortfolio)
+	postR.HandleFunc("/portfolio/{name}", control.AddSecurity)
+	postR.Use(mw.Authenticate)
+
+	// Authentication routes
+	sm.HandleFunc("/login", control.LogIn).Methods("POST")
+	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
+	sm.HandleFunc("/refresh", control.Refresh).Methods("POST")
+
+	putR := sm.Methods(http.MethodPut).Subrouter()
+	putR.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
+	putR.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
+	putR.Use(mw.Authenticate)
+
+	deleteR := sm.Methods(http.MethodDelete).Subrouter()
+	deleteR.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
+	deleteR.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+	deleteR.Use(mw.Authenticate)
 
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -15,7 +16,7 @@ import (
 )
 
 // TODO: make this more secure
-const jwtKey = "secret"
+const jwtKey = "mysecretpassword"
 
 type Credentials struct {
 	gorm.Model
@@ -28,8 +29,8 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-// SignIn handles requests to /signin and creates JWTs for valid users
-func (c *ControlHandler) SignIn(w http.ResponseWriter, r *http.Request) {
+// SignIn handles requests to /login and creates JWTs for valid users
+func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Sign In")
 	// Destruct incoming request payload
 	var (
@@ -50,17 +51,16 @@ func (c *ControlHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Migrate schema
-	db.AutoMigrate(&Credentials{})
+	// Find credentials for the email from db
 	db.Model(&Credentials{}).Where("email=?", creds.Email).Find(&dbCreds)
 
-	// If the passwords' hashes don't match inform the client
-	hash, err := encrypt([]byte(creds.Password), jwtKey)
+	weakPass, err := decrypt([]byte(dbCreds.Password), jwtKey)
 	if err != nil {
-		c.LogHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
+		c.LogHTTPError(w, "couldn't decrypt password", http.StatusInternalServerError)
 		return
 	}
-	if hash != dbCreds.Password {
+	// If the passwords' hashes don't match inform the client
+	if creds.Password != weakPass {
 		c.LogHTTPError(w, "passwords do not match", http.StatusUnauthorized)
 		return
 	}
@@ -76,17 +76,22 @@ func (c *ControlHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	// Init JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenStr, err := token.SignedString(jwtKey)
+	// Make sure key is a byte array
+	tokenStr, err := token.SignedString([]byte(jwtKey))
 	if err != nil {
 		c.LogHTTPError(w, "couldn't create JWT", http.StatusInternalServerError)
 		return
 	}
 	// Set HTTP cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenStr,
-		Expires: expTime,
+		Name:     "token",
+		Value:    tokenStr,
+		Expires:  expTime,
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
 	})
+
+	w.Write([]byte(fmt.Sprintf("Your token is: %s\n", tokenStr)))
 }
 
 // SignUp handles requests to /signup and adds new users to the db
@@ -108,15 +113,18 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	creds.Password, err = encrypt([]byte(creds.Password), jwtKey)
 	if err != nil {
 		c.LogHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
+		return
 	}
 
 	// Add credentials to database
 	db, err := NewGormDBConn("stlker.db")
+	db.AutoMigrate(&Credentials{})
 	if err != nil {
 		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
-	db.Model(&Credentials{}).Create(creds)
+	db.Model(&Credentials{}).Create(&creds)
+	w.Write([]byte("Happy Investing!\n"))
 
 }
 
@@ -132,22 +140,24 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	claims.ExpiresAt = expTime.Unix()
 	// Create new token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tknStr, err := token.SignedString(jwtKey)
+	tokenStr, err := token.SignedString(jwtKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// Set HTTP cookie with token
+	// Set HTTP cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tknStr,
-		Expires: expTime,
+		Name:     "token",
+		Value:    tokenStr,
+		Expires:  expTime,
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
 	})
 
 }
 
-// Encrypt encrypts a string using a 16 byte long key
+// encrypt encrypts a string using a 16 byte long key
 func encrypt(weakText []byte, key string) (string, error) {
 
 	// Check the length
@@ -178,27 +188,26 @@ func encrypt(weakText []byte, key string) (string, error) {
 
 func ValidateJWT(r *http.Request) (int, *Claims) {
 	cookie, err := r.Cookie("token")
-	if err != nil {
-		switch err {
-		case http.ErrNoCookie:
-			return http.StatusUnauthorized, nil
-		default:
-			return http.StatusBadRequest, nil
-		}
-
+	switch err {
+	case nil:
+	case http.ErrNoCookie:
+		return http.StatusUnauthorized, nil
+	default:
+		return http.StatusBadRequest, nil
 	}
+
 	tknStr := cookie.Value
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
-	if err != nil {
-		switch err {
-		case jwt.ErrSignatureInvalid:
-			return http.StatusUnauthorized, nil
-		default:
-			return http.StatusBadRequest, nil
-		}
+
+	switch err {
+	case nil:
+	case jwt.ErrSignatureInvalid:
+		return http.StatusUnauthorized, nil
+	default:
+		return http.StatusBadRequest, nil
 	}
 	if !tkn.Valid {
 		return http.StatusUnauthorized, nil
@@ -207,7 +216,6 @@ func ValidateJWT(r *http.Request) (int, *Claims) {
 
 }
 
-/*
 // Decrypt decrypts a string using a 16 byte long key
 func decrypt(strongText []byte, key string) (string, error) {
 
@@ -239,4 +247,3 @@ func decrypt(strongText []byte, key string) (string, error) {
 	}
 	return string(weakText), nil
 }
-*/

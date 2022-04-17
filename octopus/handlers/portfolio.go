@@ -16,6 +16,8 @@ import (
 	"gorm.io/gorm"
 )
 
+type Email struct{}
+
 func NewGormDBConn(databaseName string) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(databaseName), &gorm.Config{})
 	if err != nil {
@@ -54,7 +56,8 @@ type STLKERModel struct {
 type Portfolio struct {
 	STLKERModel
 	// Name is the name of the portfolio
-	Name string `json:"Name"`
+	Name  string `json:"Name"`
+	Email string `json:"Email"`
 	// Stocks is a slice of Security structs
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
@@ -111,6 +114,10 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
+
+	// Get email from request context
+	email := r.Context().Value(Email{})
+	c.l.Println("[INFO] Got email:", email)
 
 	// Check if name is empty which generally signifies that the json body was misconstrued
 	// or if the name contains spaces, since it isn't compatible with the URI
