@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/fercevik729/STLKER/octopus/handlers"
@@ -14,15 +13,14 @@ func Authenticate(next http.Handler) http.Handler {
 		status, claims := handlers.ValidateJWT(r)
 		if status != http.StatusOK {
 			w.WriteHeader(status)
-			return
+		} else {
+			// Use contexts to pass email address to subsequent handlers
+			username := claims.Username
+			ctx := context.WithValue(r.Context(), handlers.Username{}, string(username))
+			r = r.WithContext(ctx)
+			// Call next handler if the token was valid
+			next.ServeHTTP(w, r)
 		}
-		log.Println("[INFO] In Authenticate")
-		// Use contexts to pass email address to subsequent handlers
-		email := claims.Email
-		ctx := context.WithValue(r.Context(), handlers.Email{}, email)
-		r = r.WithContext(ctx)
-		// Call next handler if the token was valid
-		next.ServeHTTP(w, r)
 
 	})
 

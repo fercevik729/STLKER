@@ -6,3 +6,4 @@ package.json
 static/build
 key.txt
 *.db
+cookies.txt

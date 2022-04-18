@@ -20,12 +20,13 @@ const jwtKey = "mysecretpassword"
 
 type Credentials struct {
 	gorm.Model
-	Email    string `json:"Email"`
+	// TODO: validate username
+	Username string `json:"Username"`
 	Password string `json:"Password"`
 }
 
 type Claims struct {
-	Email string `json:"Email"`
+	Username string `json:"Username"`
 	jwt.StandardClaims
 }
 
@@ -52,7 +53,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find credentials for the email from db
-	db.Model(&Credentials{}).Where("email=?", creds.Email).Find(&dbCreds)
+	db.Model(&Credentials{}).Where("username=?", creds.Username).Find(&dbCreds)
 
 	weakPass, err := decrypt([]byte(dbCreds.Password), jwtKey)
 	if err != nil {
@@ -67,7 +68,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
-		Email: creds.Email,
+		Username: creds.Username,
 		StandardClaims: jwt.StandardClaims{
 			// Set expiration time in unix
 			ExpiresAt: expTime.Unix(),
@@ -104,7 +105,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	)
 	data.FromJSON(&creds, r.Body)
 	// If the credentials are empty don't sign them up
-	if creds.Email == "" || creds.Password == "" {
+	if creds.Username == "" || creds.Password == "" {
 		c.LogHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
 		return
 	}
@@ -199,7 +200,7 @@ func ValidateJWT(r *http.Request) (int, *Claims) {
 	tknStr := cookie.Value
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return []byte(jwtKey), nil
 	})
 
 	switch err {
