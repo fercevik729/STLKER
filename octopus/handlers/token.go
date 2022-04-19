@@ -1,17 +1,13 @@
 package handlers
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -32,7 +28,7 @@ type Claims struct {
 
 // SignIn handles requests to /login and creates JWTs for valid users
 func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Sign In")
+	c.l.Println("[INFO] Handle Log In")
 	// Destruct incoming request payload
 	var (
 		creds   Credentials
@@ -55,13 +51,9 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Find credentials for the email from db
 	db.Model(&Credentials{}).Where("username=?", creds.Username).Find(&dbCreds)
 
-	weakPass, err := decrypt([]byte(dbCreds.Password), jwtKey)
+	// Compare the hashe
+	err = bcrypt.CompareHashAndPassword([]byte(dbCreds.Password), []byte(creds.Password))
 	if err != nil {
-		c.LogHTTPError(w, "couldn't decrypt password", http.StatusInternalServerError)
-		return
-	}
-	// If the passwords' hashes don't match inform the client
-	if creds.Password != weakPass {
 		c.LogHTTPError(w, "passwords do not match", http.StatusUnauthorized)
 		return
 	}
@@ -92,7 +84,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteNoneMode,
 	})
 
-	w.Write([]byte(fmt.Sprintf("Your token is: %s\n", tokenStr)))
+	w.Write([]byte(fmt.Sprintf("Welcome %s!\nYour token is: %s\n", dbCreds.Username, tokenStr)))
 }
 
 // SignUp handles requests to /signup and adds new users to the db
@@ -111,11 +103,13 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Encrypt the password
-	creds.Password, err = encrypt([]byte(creds.Password), jwtKey)
+	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.LogHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
 		return
 	}
+	// Assign credential to this hash
+	creds.Password = string(hash)
 
 	// Add credentials to database
 	db, err := NewGormDBConn("stlker.db")
@@ -125,7 +119,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db.Model(&Credentials{}).Create(&creds)
-	w.Write([]byte("Happy Investing!\n"))
+	w.Write([]byte(fmt.Sprintf("Happy Investing! %s\n", creds.Username)))
 
 }
 
@@ -159,34 +153,6 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 // encrypt encrypts a string using a 16 byte long key
-func encrypt(weakText []byte, key string) (string, error) {
-
-	// Check the length
-	if len(key) < 16 {
-		return "", errors.New("key is too short")
-	}
-
-	// Create new cipher
-	c, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	// Encrypt text
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return "", err
-	}
-	nonce := make([]byte, gcm.NonceSize())
-
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
-	}
-
-	return string(gcm.Seal(nonce, nonce, weakText, nil)), nil
-
-}
-
 func ValidateJWT(r *http.Request) (int, *Claims) {
 	cookie, err := r.Cookie("token")
 	switch err {
@@ -215,36 +181,4 @@ func ValidateJWT(r *http.Request) (int, *Claims) {
 	}
 	return http.StatusOK, claims
 
-}
-
-// Decrypt decrypts a string using a 16 byte long key
-func decrypt(strongText []byte, key string) (string, error) {
-
-	// Check the length
-	if len(key) < 16 {
-		return "", errors.New("key is too short")
-	}
-	// Create cipher
-	c, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return "", err
-	}
-
-	// Decrypt the file contents
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return "", err
-	}
-
-	nonceSize := gcm.NonceSize()
-	if len(strongText) < nonceSize {
-		return "", err
-	}
-
-	nonce, strongText := strongText[:nonceSize], strongText[nonceSize:]
-	weakText, err := gcm.Open(nil, nonce, strongText, nil)
-	if err != nil {
-		return "", err
-	}
-	return string(weakText), nil
 }
