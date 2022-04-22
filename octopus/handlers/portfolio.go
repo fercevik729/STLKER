@@ -18,6 +18,8 @@ import (
 
 type Username struct{}
 
+const databasePath string = "./database/stlker.db"
+
 func NewGormDBConn(databaseName string) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(databaseName), &gorm.Config{})
 	if err != nil {
@@ -139,7 +141,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	reqPort.Username = username
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn("stlker.db")
+	db, err := NewGormDBConn(databasePath)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -179,7 +181,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Get Portfolio for:", name)
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn("stlker.db")
+	db, err := NewGormDBConn(databasePath)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -277,13 +279,13 @@ func replacePortfolio(name string, username string, target *Portfolio) error {
 		port Portfolio
 		sec  Security
 	)
-	db, err := NewGormDBConn("stlker.db")
+	db, err := NewGormDBConn(databasePath)
 	if err != nil {
 		return err
 	}
 	// Check if any results were found
-	db.Debug().Model(&port).Where("name=?", name).Where("username=?", username).Find(&port)
-	if !reflect.DeepEqual(port, &Portfolio{}) {
+	db.Debug().Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
+	if reflect.DeepEqual(port, &Portfolio{}) {
 		return fmt.Errorf("no results could be found for portfolio %s and username %s", name, username)
 	}
 	// Delete the securities and then the portfolio

@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
@@ -26,10 +27,12 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
+const userDBPath string = "./database/users.db"
+
 // SignIn handles requests to /login and creates JWTs for valid users
 func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Log In")
-	// Destruct incoming request payload
+	// Destructure incoming request payload
 	var (
 		creds   Credentials
 		dbCreds Credentials
@@ -42,7 +45,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Connect to database
-	db, err := NewGormDBConn("stlker.db")
+	db, err := NewGormDBConn(userDBPath)
 	if err != nil {
 		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -92,13 +95,28 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Sign Up")
 	// Destruct incoming request payload
 	var (
-		creds Credentials
-		err   error
+		creds     Credentials
+		otherUser Credentials
+		err       error
 	)
 	data.FromJSON(&creds, r.Body)
 	// If the credentials are empty don't sign them up
 	if creds.Username == "" || creds.Password == "" {
 		c.LogHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
+		return
+	}
+	// Create database connection
+	db, err := NewGormDBConn(userDBPath)
+	db.AutoMigrate(&Credentials{})
+	if err != nil {
+		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+
+	// Check to see if there are other users with that username
+	db.Where("username=?", creds.Username).First(&otherUser)
+	if !reflect.DeepEqual(otherUser, Credentials{}) {
+		c.LogHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
 		return
 	}
 
@@ -112,12 +130,6 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	creds.Password = string(hash)
 
 	// Add credentials to database
-	db, err := NewGormDBConn("stlker.db")
-	db.AutoMigrate(&Credentials{})
-	if err != nil {
-		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
 	db.Model(&Credentials{}).Create(&creds)
 	w.Write([]byte(fmt.Sprintf("Happy Investing! %s\n", creds.Username)))
 
@@ -129,6 +141,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	status, claims := ValidateJWT(r)
 	if status != http.StatusOK {
 		c.LogHTTPError(w, "bad refresh token request", status)
+		return
 	}
 	// Set new expiration time
 	expTime := time.Now().Add(15 * time.Minute)
@@ -152,7 +165,8 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// encrypt encrypts a string using a 16 byte long key
+// ValidateJWT checks if the JWT token in the request token is valid and returns an http status
+// code depending on if it is along with a pointer to a claim struct
 func ValidateJWT(r *http.Request) (int, *Claims) {
 	cookie, err := r.Cookie("token")
 	switch err {
