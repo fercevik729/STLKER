@@ -61,6 +61,7 @@ func (s *Security) setMoves(gain float64, change string) {
 func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName := mux.Vars(r)["name"]
+	username := c.RetrieveUsername(r)
 
 	// Get ticker and shares info from JSON body
 	type securityData struct {
@@ -81,13 +82,13 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	// Get portfolio id
-	portId, err := getPortfolioId(db, portName)
+	portId, err := getPortfolioId(db, portName, username)
 	if err != nil {
 		c.LogHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
 	}
 
 	// Create insert sql query
-	stmt, err := db.Prepare(`INSERT INTO securities(created_at, security_id, ticker, bought_price, curr_price, shares, currency, portfolio_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO securities(created_at, security_id, ticker, bought_price, curr_price, shares, currency, portfolio_id, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		c.LogHTTPError(w, "Could't prepare insert query string", http.StatusInternalServerError)
 		return
@@ -99,7 +100,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Execute query
-	res, err := stmt.Exec(time.Now(), 0, ticker, stock.Price, stock.Price, shares, "USD", portId)
+	res, err := stmt.Exec(time.Now(), 0, ticker, stock.Price, stock.Price, shares, "USD", portId, username)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't execute insert query", http.StatusInternalServerError)
 		return
@@ -115,7 +116,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker := c.getSecurityVars("Read Security", r)
+	portName, ticker, username := c.getSecurityVars("Read Security", r)
 	db, err := NewSqlDBConn(databasePath)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connct to database", http.StatusInternalServerError)
@@ -124,7 +125,7 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	// Get portfolio_id
-	portId, err := getPortfolioId(db, portName)
+	portId, err := getPortfolioId(db, portName, username)
 	if err != nil {
 		c.LogHTTPError(w, fmt.Sprintf("Couldn't get updated price for %s", portName), http.StatusBadRequest)
 		return
@@ -164,7 +165,7 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker := c.getSecurityVars("Edit Security", r)
+	portName, ticker, username := c.getSecurityVars("Edit Security", r)
 	shares := mux.Vars(r)["shares"]
 
 	// Create sql db instance
@@ -176,7 +177,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	// Get portfolio id
-	portId, err := getPortfolioId(db, portName)
+	portId, err := getPortfolioId(db, portName, username)
 	if err != nil {
 		c.LogHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
 		return
@@ -216,7 +217,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
-	portName, ticker := c.getSecurityVars("Delete Security", r)
+	portName, ticker, username := c.getSecurityVars("Delete Security", r)
 	// Connect to database
 	db, err := NewSqlDBConn(databasePath)
 	if err != nil {
@@ -225,7 +226,7 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 	defer db.Close()
 	// Get portfolio with the name specified by the mux variable
-	portId, err := getPortfolioId(db, portName)
+	portId, err := getPortfolioId(db, portName, username)
 	if err != nil {
 		c.LogHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
 		return
@@ -265,22 +266,22 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// getVars returns a portfolioName and ticker string vars. It also logs
+// getVars returns a portfolioName, ticker string vars, and username from the request. It also logs
 // the method being handled
-func (c *ControlHandler) getSecurityVars(method string, r *http.Request) (portName string, ticker string) {
+func (c *ControlHandler) getSecurityVars(method string, r *http.Request) (portName string, ticker string, username string) {
 	// Get URI vars
 	vars := mux.Vars(r)
 	portName = vars["name"]
 	ticker = vars["ticker"]
 	// Log endpoint
 	c.l.Printf("[INFO] Handle %s for portfolio: %s, for ticker: %s", method, portName, ticker)
-	return portName, ticker
+	return portName, ticker, c.RetrieveUsername(r)
 }
 
-// getPortfolioId returns a portfolio's id provided its name
-func getPortfolioId(db *sql.DB, portName string) (int, error) {
+// getPortfolioId returns a portfolio's id provided its name and the username associated with it
+func getPortfolioId(db *sql.DB, portName string, username string) (int, error) {
 	// Execute query
-	rows, err := db.Query("SELECT id FROM portfolios WHERE name=?", portName)
+	rows, err := db.Query("SELECT id FROM portfolios WHERE name=? AND username=?", portName, username)
 	if err != nil {
 		return -1, err
 	}
