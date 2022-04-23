@@ -27,8 +27,6 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-const userDBPath string = "./database/users.db"
-
 // SignIn handles requests to /login and creates JWTs for valid users
 func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Log In")
@@ -45,7 +43,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Connect to database
-	db, err := NewGormDBConn(userDBPath)
+	db, err := NewGormDBConn(databasePath)
 	if err != nil {
 		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -106,7 +104,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Create database connection
-	db, err := NewGormDBConn(userDBPath)
+	db, err := NewGormDBConn(databasePath)
 	db.AutoMigrate(&Credentials{})
 	if err != nil {
 		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)

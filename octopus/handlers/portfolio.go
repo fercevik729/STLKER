@@ -18,6 +18,11 @@ import (
 
 type Username struct{}
 
+type NamePair struct {
+	Name     string
+	Username string
+}
+
 const databasePath string = "./database/stlker.db"
 
 func NewGormDBConn(databaseName string) (*gorm.DB, error) {
@@ -153,7 +158,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	sqlPort := Portfolio{}
 	// Check if a portfolio with that name for that user already exists
-	db.Debug().First(&sqlPort, "name=?", reqPort.Name, "username=?", username)
+	db.Debug().Where("name=? AND username=?", reqPort.Name, username).First(&sqlPort)
 
 	// If a portfolio with that name does exist return an error
 	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
@@ -181,20 +186,43 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	username := c.RetrieveUsername(r)
 	c.l.Printf("[INFO] Handle Get All for user: %s\n", username)
 
-	var (
-		ports []Portfolio
-	)
+	var ports []Portfolio
+
+	// Open database
 	db, err := NewGormDBConn(databasePath)
 	if err != nil {
 		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
-	// If the username is admin, retrieve all portfolios for now
+	// If the username is admin, retrieve all portfolio names and associated usernames
+	// Then return in an ordered format
 	if username == "admin" {
-		db.Preload("Securities").Find(&ports)
-	} else {
-		db.Where("username=?", username).Preload("Securities").Find(&ports)
+		var (
+			usernames []string
+			portnames []string
+		)
+		if err != nil {
+			c.LogHTTPError(w, "Couldn't open user's database", http.StatusInternalServerError)
+			return
+		}
+		// Get all usernames except for admin
+		db.Model(&Credentials{}).Not("username=?", "admin").Select("username").Find(&usernames)
+
+		// Create a map of usernames to slices of portfolio names
+		table := make(map[string][]string)
+
+		// Iterate ove all users
+		for _, user := range usernames {
+			db.Table("portfolios").Where("username=?", user).Select("name").Find(&portnames)
+			table[user] = portnames
+		}
+		// Return the table in json format
+		data.ToJSON(table, w)
+		return
+
 	}
+	// Otherwise retrieve all portfolio data for a user
+	db.Where("username=?", username).Preload("Securities").Find(&ports)
 
 	profits := make([]*Profits, 0)
 	for i := range ports {
