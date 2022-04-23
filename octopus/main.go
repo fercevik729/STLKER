@@ -80,6 +80,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Create subrouters and register handlers
 	getR := sm.Methods(http.MethodGet).Subrouter()
 	getR.HandleFunc("/portfolio/{name}", control.GetPortfolio)
+	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.Use(mw.Authenticate)
 
 	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")

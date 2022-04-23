@@ -77,6 +77,7 @@ type Portfolio struct {
 }
 
 type Profits struct {
+	Name          string      `json:"Portfolio Name"`
 	OriginalValue float64     `json:"Original Value"`
 	NewValue      float64     `json:"Current Value"`
 	NetGain       float64     `json:"Net Gain"`
@@ -115,6 +116,7 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 
 	// Return profits
 	return &Profits{
+		Name:          p.Name,
 		OriginalValue: original,
 		NewValue:      new,
 		Moves:         p.Securities,
@@ -175,6 +177,39 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 }
 
+func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	username := c.RetrieveUsername(r)
+	c.l.Printf("[INFO] Handle Get All for user: %s\n", username)
+
+	var (
+		ports []Portfolio
+	)
+	db, err := NewGormDBConn(databasePath)
+	if err != nil {
+		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+	// If the username is admin, retrieve all portfolios for now
+	if username == "admin" {
+		db.Preload("Securities").Find(&ports)
+	} else {
+		db.Where("username=?", username).Preload("Securities").Find(&ports)
+	}
+
+	profits := make([]*Profits, 0)
+	for i := range ports {
+		prof, err := ports[i].calcProfits()
+		if err != nil {
+			c.LogHTTPError(w, fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name), http.StatusInternalServerError)
+			return
+		}
+		profits = append(profits, prof)
+	}
+
+	data.ToJSON(profits, w)
+
+}
+
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter
 	name := mux.Vars(r)["name"]
@@ -190,7 +225,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	var port Portfolio
 	// Check if a portfolio with that name for that user can be found
 	username := c.RetrieveUsername(r)
-	db.Debug().Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
+	db.Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
 	// Check if any results were found
 	if port.ID == 0 {
 		c.l.Println("[DEBUG] No results found")
