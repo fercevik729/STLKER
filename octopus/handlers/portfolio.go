@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
@@ -97,7 +96,6 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 }
 
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Create Portfolio")
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
@@ -105,18 +103,20 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	// Check if name is empty which generally signifies that the json body was misconstrued
 	// or if the name contains spaces, since it isn't compatible with the URI
 	if reqPort.Name == "" || strings.Contains(reqPort.Name, " ") {
-		c.LogHTTPError(w, "Bad portfolio request. Name shouldn't be empty or contain spaces", http.StatusBadRequest)
+		c.logHTTPError(w, "Bad portfolio request. Name shouldn't be empty or contain spaces", http.StatusBadRequest)
 		return
 	}
 
 	// Set username of the requested portfolio
-	username := c.RetrieveUsername(r)
+	username := c.retrieveUsername(r)
 	reqPort.Username = username
 
+	c.l.Println("[INFO] Creating portfolio:", reqPort.Name, "for user:", username)
+
 	// Open sqlite db connection
-	db, err := NewGormDBConn(databasePath)
+	db, err := newGormDBConn(databasePath)
 	if err != nil {
-		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 	// Migrate schema
@@ -128,7 +128,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// If a portfolio with that name does exist return an error
 	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
-		c.LogHTTPError(w, "A portfolio with that name already exists", http.StatusBadRequest)
+		c.logHTTPError(w, "A portfolio with that name already exists", http.StatusBadRequest)
 		return
 	}
 	// Retrieve prices for all stocks in the portfolio
@@ -149,16 +149,16 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	username := c.RetrieveUsername(r)
-	isAdmin := c.RetrieveAdmin(r)
-	c.l.Printf("[INFO] Handle Get All for user: %s\n", username)
+	username := c.retrieveUsername(r)
+	isAdmin := c.retrieveAdmin(r)
+	c.l.Printf("[INFO] Getting all portfolios for user: %s\n", username)
 
 	var ports []Portfolio
 
 	// Open database
-	db, err := NewGormDBConn(databasePath)
+	db, err := newGormDBConn(databasePath)
 	if err != nil {
-		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 	// If the username is admin, retrieve all portfolio names and associated usernames
@@ -169,7 +169,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 			portnames []string
 		)
 		if err != nil {
-			c.LogHTTPError(w, "Couldn't open user's database", http.StatusInternalServerError)
+			c.logHTTPError(w, "Couldn't open user's database", http.StatusInternalServerError)
 			return
 		}
 		// Get all usernames except for admin
@@ -195,7 +195,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	for i := range ports {
 		prof, err := ports[i].calcProfits()
 		if err != nil {
-			c.LogHTTPError(w, fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name), http.StatusInternalServerError)
+			c.logHTTPError(w, fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name), http.StatusInternalServerError)
 			return
 		}
 		profits = append(profits, prof)
@@ -206,31 +206,31 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
-	// Retrieve portfolio name parameter
+	// Retrieve portfolio name parameter and username
 	name := mux.Vars(r)["name"]
-	c.l.Println("[INFO] Handle Get Portfolio for:", name)
+	username := c.retrieveUsername(r)
+	c.l.Println("[INFO] Getting portfolio:", name, "and user:", username)
 
 	// Open sqlite db connection
-	db, err := NewGormDBConn(databasePath)
+	db, err := newGormDBConn(databasePath)
 	if err != nil {
-		c.LogHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 
 	var port Portfolio
 	// Check if a portfolio with that name for that user can be found
-	username := c.RetrieveUsername(r)
 	db.Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
 	// Check if any results were found
 	if port.ID == 0 {
 		c.l.Println("[DEBUG] No results found")
-		c.LogHTTPError(w, fmt.Sprintf("no results found with name %s, and user %s", name, username), http.StatusBadRequest)
+		c.logHTTPError(w, fmt.Sprintf("no results found with name %s, and user %s", name, username), http.StatusBadRequest)
 		return
 	}
 	// Update the database entry with the new prices
-	err = c.updateDB(w, &port)
+	err = c.updateDB(&port)
 	if err != nil {
-		c.LogHTTPError(w, err.Error(), http.StatusBadRequest)
+		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Calculate the profits
@@ -246,18 +246,18 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Get variables
 	name := mux.Vars(r)["name"]
-	username := c.RetrieveUsername(r)
+	username := c.retrieveUsername(r)
 
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 	reqPort.Username = username
 
-	c.l.Println("[INFO] Handle Update Portfolio for:", name, "and user:", username)
+	c.l.Println("[INFO] Updating portfolio:", name, "for user:", username)
 	// Call helper method
 	err := replacePortfolio(name, username, &reqPort)
 	if err != nil {
-		c.LogHTTPError(w, err.Error(), http.StatusBadRequest)
+		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 	}
 
 	// Send response message
@@ -270,64 +270,14 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 
 func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
-	username := c.RetrieveUsername(r)
-	c.l.Println("[INFO] Handle Delete Portfolio for:", name, "and user:", username)
+	username := c.retrieveUsername(r)
+	c.l.Println("[INFO] Deleting portfolio for:", name, "and user:", username)
 	// Delete portfolio and all child securities
 	err := replacePortfolio(name, username, nil)
 	if err != nil {
-		c.LogHTTPError(w, err.Error(), http.StatusBadRequest)
+		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 	}
 	data.ToJSON(&ResponseMessage{
 		Msg: fmt.Sprintf("Deleted portfolio %s", name),
 	}, w)
-}
-
-func (c *ControlHandler) updateDB(w http.ResponseWriter, port *Portfolio) error {
-	// Update prices using gRPC API
-	c.updatePrices(port)
-	// Delete previous portfolio and replace it with updated one
-	return replacePortfolio(port.Name, port.Username, port)
-
-}
-
-func (c *ControlHandler) updatePrices(port *Portfolio) {
-	// Concurrently retrieve stock prices
-	wg := &sync.WaitGroup{}
-	for _, sec := range port.Securities {
-		wg.Add(1)
-		go func(s *Security) {
-			c.updateSecurities(s)
-			wg.Done()
-		}(sec)
-	}
-	wg.Wait()
-
-}
-
-func replacePortfolio(name string, username string, target *Portfolio) error {
-	var (
-		port Portfolio
-		sec  Security
-	)
-	db, err := NewGormDBConn(databasePath)
-	if err != nil {
-		return err
-	}
-	// Check if any results were found
-	db.Debug().Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
-	if reflect.DeepEqual(port, &Portfolio{}) {
-		return fmt.Errorf("no results could be found for portfolio %s and username %s", name, username)
-	}
-	// Delete the securities and then the portfolio
-	db.Debug().Model(&sec).Where("portfolio_id=?", port.ID).Delete(sec)
-	db.Debug().Model(&port).Delete(&port)
-
-	// If a new portfolio is specified create it in place of the old one
-	if target != nil {
-		db.Create(target)
-
-	}
-
-	return nil
-
 }

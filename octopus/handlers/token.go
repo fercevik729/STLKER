@@ -40,13 +40,13 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 
 	// If the user object is empty it was a bad request
 	if usr == (User{}) {
-		c.LogHTTPError(w, "Must provide username and password", http.StatusBadRequest)
+		c.logHTTPError(w, "Must provide username and password", http.StatusBadRequest)
 		return
 	}
 	// Connect to database
-	db, err := NewGormDBConn(databasePath)
+	db, err := newGormDBConn(databasePath)
 	if err != nil {
-		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Compare the hashes
 	err = bcrypt.CompareHashAndPassword([]byte(dbUsr.Password), []byte(usr.Password))
 	if err != nil {
-		c.LogHTTPError(w, "passwords do not match", http.StatusUnauthorized)
+		c.logHTTPError(w, "passwords do not match", http.StatusUnauthorized)
 		return
 	}
 	// If the username is "admin" set admin privileges
@@ -80,7 +80,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Make sure key is a byte array
 	tokenStr, err := token.SignedString([]byte(jwtKey))
 	if err != nil {
-		c.LogHTTPError(w, "couldn't create JWT", http.StatusInternalServerError)
+		c.logHTTPError(w, "couldn't create JWT", http.StatusInternalServerError)
 		return
 	}
 	// Init refresh JWT
@@ -94,7 +94,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	rfToken := jwt.NewWithClaims(jwt.SigningMethodHS256, rfClaims)
 	rfTokenStr, err := rfToken.SignedString([]byte(jwtKey))
 	if err != nil {
-		c.LogHTTPError(w, "couldn't create refresh JWT", http.StatusInternalServerError)
+		c.logHTTPError(w, "couldn't create refresh JWT", http.StatusInternalServerError)
 		return
 	}
 	// Set HTTP cookies for both tokens
@@ -147,28 +147,28 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	data.FromJSON(&creds, r.Body)
 	// If the credentials are empty don't sign them up
 	if creds.Username == "" || creds.Password == "" {
-		c.LogHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
+		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
 		return
 	}
 	// Create database connection
-	db, err := NewGormDBConn(databasePath)
+	db, err := newGormDBConn(databasePath)
 	db.AutoMigrate(&User{})
 	if err != nil {
-		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 
 	// Check to see if there are other users with that username
 	db.Where("username=?", creds.Username).First(&otherUser)
 	if !reflect.DeepEqual(otherUser, User{}) {
-		c.LogHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
+		c.logHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
 		return
 	}
 
 	// Encrypt the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.LogHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
+		c.logHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
 		return
 	}
 	// Assign credential to this hash
@@ -187,7 +187,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle refresh")
 	status, claims := ValidateJWT(r, "refreshToken")
 	if status != http.StatusOK {
-		c.LogHTTPError(w, "bad refresh token request", status)
+		c.logHTTPError(w, "bad refresh token request", status)
 		return
 	}
 	// Set new expiration time
