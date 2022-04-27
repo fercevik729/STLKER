@@ -94,7 +94,8 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Authentication routes
 	sm.HandleFunc("/login", control.LogIn).Methods("POST")
 	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
-	sm.HandleFunc("/refresh", control.Refresh).Methods("POST")
+	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
+	sm.HandleFunc("/logout", control.LogOut).Methods("GET")
 
 	putR := sm.Methods(http.MethodPut).Subrouter()
 	putR.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)

@@ -12,11 +12,11 @@ import (
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/gorilla/mux"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 type Username struct{}
+
+type IsAdmin struct{}
 
 type NamePair struct {
 	Name     string
@@ -24,40 +24,6 @@ type NamePair struct {
 }
 
 const databasePath string = "./database/stlker.db"
-
-func NewGormDBConn(databaseName string) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(databaseName), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-
-}
-
-func NewSqlDBConn(databaseName string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", databaseName)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func (c *ControlHandler) LogHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
-	c.l.Printf("[ERROR] %s\n", errorMsg)
-	http.Error(w, fmt.Sprintf("Error: %s", errorMsg), errorCode)
-}
-
-func (c *ControlHandler) RetrieveUsername(r *http.Request) string {
-	// Get email from request context
-	username := r.Context().Value(Username{})
-	c.l.Println("[INFO] Got username:", username)
-
-	v, ok := username.(string)
-	if ok {
-		return v
-	}
-	return ""
-}
 
 type ResponseMessage struct {
 	Msg string `json:"Message"`
@@ -184,6 +150,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	username := c.RetrieveUsername(r)
+	isAdmin := c.RetrieveAdmin(r)
 	c.l.Printf("[INFO] Handle Get All for user: %s\n", username)
 
 	var ports []Portfolio
@@ -196,7 +163,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 	// If the username is admin, retrieve all portfolio names and associated usernames
 	// Then return in an ordered format
-	if username == "admin" {
+	if isAdmin {
 		var (
 			usernames []string
 			portnames []string
@@ -206,7 +173,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Get all usernames except for admin
-		db.Model(&Credentials{}).Not("username=?", "admin").Select("username").Find(&usernames)
+		db.Model(&User{}).Not("username=?", "admin").Select("username").Find(&usernames)
 
 		// Create a map of usernames to slices of portfolio names
 		table := make(map[string][]string)

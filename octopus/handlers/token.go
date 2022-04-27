@@ -15,7 +15,7 @@ import (
 // TODO: make this more secure
 const jwtKey = "mysecretpassword"
 
-type Credentials struct {
+type User struct {
 	gorm.Model
 	// TODO: validate username
 	Username string `json:"Username"`
@@ -23,22 +23,23 @@ type Credentials struct {
 }
 
 type Claims struct {
-	Username string `json:"Username"`
+	Name  string `json:"Name"`
+	Admin bool   `json:"Admin"`
 	jwt.StandardClaims
 }
 
-// SignIn handles requests to /login and creates JWTs for valid users
+// LogIn handles requests to /login and creates JWTs for valid users
 func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Log In")
 	// Destructure incoming request payload
 	var (
-		creds   Credentials
-		dbCreds Credentials
+		usr   User
+		dbUsr User
+		admin bool
 	)
-	data.FromJSON(&creds, r.Body)
+	data.FromJSON(&usr, r.Body)
 
-	// If the creds object is empty it was a bad request
-	if creds == (Credentials{}) {
+	// If the user object is empty it was a bad request
+	if usr == (User{}) {
 		c.LogHTTPError(w, "Must provide username and password", http.StatusBadRequest)
 		return
 	}
@@ -50,25 +51,31 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find credentials for the email from db
-	db.Model(&Credentials{}).Where("username=?", creds.Username).Find(&dbCreds)
+	db.Model(&User{}).Where("username=?", usr.Username).Find(&dbUsr)
 
-	// Compare the hashe
-	err = bcrypt.CompareHashAndPassword([]byte(dbCreds.Password), []byte(creds.Password))
+	// Compare the hashes
+	err = bcrypt.CompareHashAndPassword([]byte(dbUsr.Password), []byte(usr.Password))
 	if err != nil {
 		c.LogHTTPError(w, "passwords do not match", http.StatusUnauthorized)
 		return
 	}
+	// If the username is "admin" set admin privileges
+	if usr.Username == "admin" {
+		admin = true
+	}
+	c.l.Println("[INFO] Handle Log In for user:", usr.Username)
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
-		Username: creds.Username,
+		Name:  usr.Username,
+		Admin: admin,
 		StandardClaims: jwt.StandardClaims{
 			// Set expiration time in unix
 			ExpiresAt: expTime.Unix(),
 		},
 	}
 
-	// Init JWT
+	// Init access JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Make sure key is a byte array
 	tokenStr, err := token.SignedString([]byte(jwtKey))
@@ -76,7 +83,21 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		c.LogHTTPError(w, "couldn't create JWT", http.StatusInternalServerError)
 		return
 	}
-	// Set HTTP cookie
+	// Init refresh JWT
+	rfClaims := &Claims{
+		Name:  usr.Username,
+		Admin: admin,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expTime.Add(120 * time.Minute).Unix(),
+		},
+	}
+	rfToken := jwt.NewWithClaims(jwt.SigningMethodHS256, rfClaims)
+	rfTokenStr, err := rfToken.SignedString([]byte(jwtKey))
+	if err != nil {
+		c.LogHTTPError(w, "couldn't create refresh JWT", http.StatusInternalServerError)
+		return
+	}
+	// Set HTTP cookies for both tokens
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    tokenStr,
@@ -84,8 +105,34 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
 	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refreshToken",
+		Value:    rfTokenStr,
+		Expires:  expTime.Add(120 * time.Minute),
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+	})
+	resp := make(map[string]string, 0)
+	resp["User"] = dbUsr.Username
+	resp["Access-Token"] = tokenStr
+	resp["Refresh-Token"] = rfTokenStr
 
-	w.Write([]byte(fmt.Sprintf("Welcome %s!\nYour token is: %s\n", dbCreds.Username, tokenStr)))
+	data.ToJSON(resp, w)
+}
+
+// LogOut deletes the token cookie
+func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
+	c.l.Print("[INFO] Handle Log Out")
+	// Set max age to < 0 for token and refresh token cookies in order to delete them
+	http.SetCookie(w, &http.Cookie{
+		Name:   "token",
+		MaxAge: -1,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:   "refreshToken",
+		MaxAge: -1,
+	})
+
 }
 
 // SignUp handles requests to /signup and adds new users to the db
@@ -93,8 +140,8 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	c.l.Println("[INFO] Handle Sign Up")
 	// Destruct incoming request payload
 	var (
-		creds     Credentials
-		otherUser Credentials
+		creds     User
+		otherUser User
 		err       error
 	)
 	data.FromJSON(&creds, r.Body)
@@ -105,7 +152,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	// Create database connection
 	db, err := NewGormDBConn(databasePath)
-	db.AutoMigrate(&Credentials{})
+	db.AutoMigrate(&User{})
 	if err != nil {
 		c.LogHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -113,7 +160,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Check to see if there are other users with that username
 	db.Where("username=?", creds.Username).First(&otherUser)
-	if !reflect.DeepEqual(otherUser, Credentials{}) {
+	if !reflect.DeepEqual(otherUser, User{}) {
 		c.LogHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
 		return
 	}
@@ -128,7 +175,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	creds.Password = string(hash)
 
 	// Add credentials to database
-	db.Model(&Credentials{}).Create(&creds)
+	db.Model(&User{}).Create(&creds)
 	w.Write([]byte(fmt.Sprintf("Happy Investing! %s\n", creds.Username)))
 
 }
@@ -136,7 +183,9 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 // Refresh handles requests to /refresh and regenerates tokens if the current token
 // is within a minute of expiry
 func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	status, claims := ValidateJWT(r)
+
+	c.l.Println("[INFO] Handle refresh")
+	status, claims := ValidateJWT(r, "refreshToken")
 	if status != http.StatusOK {
 		c.LogHTTPError(w, "bad refresh token request", status)
 		return
@@ -146,7 +195,8 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	claims.ExpiresAt = expTime.Unix()
 	// Create new token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenStr, err := token.SignedString(jwtKey)
+	// Make sure key is a byte array
+	tokenStr, err := token.SignedString([]byte(jwtKey))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -160,13 +210,17 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
 	})
+	// Send the token in the resp body as well
+	data.ToJSON(map[string]string{
+		"Access-Token": tokenStr,
+	}, w)
 
 }
 
 // ValidateJWT checks if the JWT token in the request token is valid and returns an http status
 // code depending on if it is along with a pointer to a claim struct
-func ValidateJWT(r *http.Request) (int, *Claims) {
-	cookie, err := r.Cookie("token")
+func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
+	cookie, err := r.Cookie(tokenName)
 	switch err {
 	case nil:
 	case http.ErrNoCookie:
