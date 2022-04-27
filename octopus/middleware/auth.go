@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
+	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/fercevik729/STLKER/octopus/handlers"
 )
 
@@ -13,6 +15,9 @@ func Authenticate(next http.Handler) http.Handler {
 		status, claims := handlers.ValidateJWT(r, "token")
 		if status != http.StatusOK {
 			w.WriteHeader(status)
+			data.ToJSON(handlers.ResponseMessage{
+				Msg: fmt.Sprintf("Error %d", status),
+			}, w)
 		} else {
 			// Use contexts to pass username and isAdmin to subsequent handlers
 			username := claims.Name

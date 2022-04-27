@@ -25,6 +25,12 @@ type Security struct {
 	PortfolioID uint `json:"-"`
 }
 
+// Used for destructuring POST and PUT data
+type securityData struct {
+	Ticker string  `json:"Ticker"`
+	Shares float64 `json:"Shares"`
+}
+
 func (s *Security) setMoves(gain float64, change string) {
 	s.Gain = gain
 	s.Change = change
@@ -36,10 +42,6 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	username := c.retrieveUsername(r)
 
 	// Get ticker and shares info from JSON body
-	type securityData struct {
-		Ticker string  `json:"Ticker"`
-		Shares float64 `json:"Shares"`
-	}
 	var params securityData
 	data.FromJSON(&params, r.Body)
 
@@ -72,7 +74,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Execute query
-	res, err := stmt.Exec(time.Now(), 0, ticker, stock.Price, stock.Price, shares, "USD", portId, username)
+	res, err := stmt.Exec(time.Now(), 0, ticker, stock.Price, stock.Price, shares, "USD", portId)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't execute insert query", http.StatusInternalServerError)
 		return
@@ -137,8 +139,15 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker, username := c.getSecurityVars("Edit Security", r)
-	shares := mux.Vars(r)["shares"]
+	portName := mux.Vars(r)["name"]
+	username := c.retrieveUsername(r)
+
+	// Get ticker and shares info from JSON body
+	var params securityData
+	data.FromJSON(&params, r.Body)
+
+	ticker := params.Ticker
+	shares := params.Shares
 
 	// Create sql db instance
 	db, err := newSqlDBConn(databasePath)
@@ -171,7 +180,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 	}
 	// Write a response to the client to tell them if the security was there in the first place
 	if affected > 0 {
-		msg := fmt.Sprintf("Updated %d row", affected)
+		msg := fmt.Sprintf("Updated %d security", affected)
 		c.l.Printf("[DEBUG] %s\n", msg)
 
 		data.ToJSON(&ResponseMessage{
@@ -222,7 +231,7 @@ func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 	// Write a response to the client to tell them if the security was there in the first place
 	if affected > 0 {
-		msg := fmt.Sprintf("Deleted %d row", affected)
+		msg := fmt.Sprintf("Deleted %d security", affected)
 		c.l.Printf("[DEBUG] %s\n", msg)
 
 		data.ToJSON(&ResponseMessage{

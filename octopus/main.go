@@ -81,6 +81,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	getR := sm.Methods(http.MethodGet).Subrouter()
 	getR.HandleFunc("/portfolio/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
+	getR.HandleFunc("/portfolio/{name}/{ticker}", control.ReadSecurity)
 	getR.Use(mw.Authenticate)
 
 	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
@@ -92,10 +93,10 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	postR.Use(mw.Authenticate)
 
 	// Authentication routes
-	sm.HandleFunc("/login", control.LogIn).Methods("POST")
 	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
-	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
+	sm.HandleFunc("/login", control.LogIn).Methods("POST")
 	sm.HandleFunc("/logout", control.LogOut).Methods("GET")
+	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
 
 	putR := sm.Methods(http.MethodPut).Subrouter()
 	putR.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
