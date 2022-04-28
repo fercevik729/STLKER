@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
@@ -40,7 +39,7 @@ type STLKERModel struct {
 type Portfolio struct {
 	STLKERModel
 	// Name is the name of the portfolio
-	Name     string `json:"Name" validate:"required,alphanumunicode,min=3"`
+	Name     string `json:"Name" validate:"required,alphanum,min=3,max=30"`
 	Username string `json:"Username"`
 	// Stocks is a slice of Security structs
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
@@ -100,16 +99,10 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 
-	// Check if name is empty which generally signifies that the json body was badly formatted
-	// or if the name contains spaces, since it isn't compatible with the URI
-	if reqPort.Name == "" || strings.Contains(reqPort.Name, " ") {
-		c.logHTTPError(w, "Bad portfolio request. Name shouldn't be empty or contain spaces", http.StatusBadRequest)
-		return
-	}
-	// Validate the struct
-	ok, msg := validateStruct(reqPort)
+	// Validate the portfolio
+	ok := validatePortfolio(&reqPort)
 	if !ok {
-		c.logHTTPError(w, msg, http.StatusBadRequest)
+		c.logHTTPError(w, "Bad portfolio request. Name shouldn't be empty, contain spaces, and must be alphanumeric", http.StatusBadRequest)
 		return
 	}
 	// Set username of the requested portfolio
@@ -142,7 +135,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// Create portfolio entry
 	db.Debug().Create(&reqPort)
-	msg = fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
+	msg := fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
 	c.l.Printf("[DEBUG] %s", msg)
 
 	// Write to response body

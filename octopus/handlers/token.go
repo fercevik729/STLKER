@@ -159,9 +159,10 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
 		return
 	}
-	ok, msg := validateStruct(creds)
+	ok := validateUser(creds)
 	if ok {
-		c.logHTTPError(w, msg, http.StatusBadRequest)
+		c.logHTTPError(w, "Bad username/password", http.StatusBadRequest)
+		return
 	}
 	// Create database connection
 	db, err := newGormDBConn(databasePath)

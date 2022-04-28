@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -187,11 +188,29 @@ func newSqlDBConn(databaseName string) (*sql.DB, error) {
 	return db, nil
 }
 
-// validateStruct validates a user-provided structure
-func validateStruct(structure interface{}) (bool, string) {
-	err := validator.New().Struct(structure)
-	if _, ok := err.(*validator.InvalidValidationError); ok {
-		return false, err.Error()
+// validatePortfolio validates a portfolio's name
+func validatePortfolio(port *Portfolio) bool {
+	// Check the length of the name and if it contains spaces
+	if len(port.Name) < 3 || len(port.Name) > 30 || strings.Contains(port.Name, " ") {
+		return false
 	}
-	return true, ""
+	// Check if the name is alphanumeric
+	re := regexp.MustCompile(`[a-zA-Z0-9]+`)
+	matches := re.FindAllString(port.Name, -1)
+
+	return len(matches) == 1
+
+}
+
+// validateUser validates a user
+func validateUser(usr User) bool {
+	// Check the lengths
+	if len(usr.Username) < 6 || len(usr.Username) > 30 || len(usr.Password) < 10 || len(usr.Password) > 100 {
+		return false
+	}
+	// Check if the username or pwd contain invalid chars or the password contains the username
+	if strings.ContainsAny(usr.Username, "(){}[]|!%^@:;&_'-+<>") || strings.ContainsAny(usr.Password, "(){}[]|!%^@:;&_'-+<>") || strings.Contains(usr.Password, usr.Username) {
+		return false
+	}
+	return true
 }
