@@ -9,8 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	p "github.com/fercevik729/STLKER/eagle/protos"
 	"github.com/fercevik729/STLKER/octopus/handlers"
-	p "github.com/fercevik729/STLKER/watcher-api/protos"
+	mw "github.com/fercevik729/STLKER/octopus/middleware"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
@@ -18,7 +19,7 @@ import (
 )
 
 func main() {
-	l := log.New(os.Stdout, "control-api", log.LstdFlags)
+	l := log.New(os.Stdout, "octopus", log.LstdFlags)
 
 	// Dial gRPC server
 	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -33,25 +34,8 @@ func main() {
 	sm := mux.NewRouter()
 	// Create handlers
 	control := handlers.NewControlHandler(l, wc)
-
-	// Create subrouters and register handlers
-	// TODO: Add middleware for authentication and logging
-	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/portfolio/{name}", control.GetPortfolio)
-	getRouter.HandleFunc("/info/{ticker}/{currency}", control.GetInfo)
-	getRouter.HandleFunc("/moreinfo/{ticker}", control.MoreInfo)
-
-	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/portfolio", control.CreatePortfolio)
-	postRouter.HandleFunc("/portfolio/{name}", control.AddSecurity)
-
-	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
-	putRouter.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
-
-	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
-	deleteRouter.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+	// Register routes
+	registerRoutes(sm, control)
 
 	// CORS for UI
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
@@ -66,7 +50,7 @@ func main() {
 		WriteTimeout: 120 * time.Second,
 	}
 	go func() {
-		l.Println("[DEBUG] Starting control on port 8080")
+		l.Println("[DEBUG] Starting octopus on port 8080")
 
 		err := s.ListenAndServe()
 		if err != nil {
@@ -89,5 +73,39 @@ func main() {
 	if err != nil {
 		l.Println("Tried shutting down, but got this error:", err)
 	}
+
+}
+
+func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
+	// Create subrouters and register handlers
+	getR := sm.Methods(http.MethodGet).Subrouter()
+	getR.HandleFunc("/portfolio/{name}", control.GetPortfolio)
+	getR.HandleFunc("/portfolios", control.GetAll)
+	getR.HandleFunc("/portfolio/{name}/{ticker}", control.ReadSecurity)
+	getR.Use(mw.Authenticate)
+
+	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
+	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")
+
+	postR := sm.Methods(http.MethodPost).Subrouter()
+	postR.HandleFunc("/portfolio", control.CreatePortfolio)
+	postR.HandleFunc("/portfolio/{name}", control.AddSecurity)
+	postR.Use(mw.Authenticate)
+
+	// Authentication routes
+	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
+	sm.HandleFunc("/login", control.LogIn).Methods("POST")
+	sm.HandleFunc("/logout", control.LogOut).Methods("GET")
+	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
+
+	putR := sm.Methods(http.MethodPut).Subrouter()
+	putR.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
+	putR.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
+	putR.Use(mw.Authenticate)
+
+	deleteR := sm.Methods(http.MethodDelete).Subrouter()
+	deleteR.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
+	deleteR.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+	deleteR.Use(mw.Authenticate)
 
 }

@@ -8,13 +8,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fercevik729/STLKER/eagle/protos"
 	"github.com/fercevik729/STLKER/octopus/handlers"
-	"github.com/fercevik729/STLKER/watcher-api/protos"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// TODO: Update tests to utilize cookies
 func TestCreatePortfolio(t *testing.T) {
 	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "T","Bought Price":12.50,"Shares":50},{"Ticker":"TSLA","Bought Price":120.21,"Shares":25},{"Ticker": "AMC","Bought Price":5.07,"Shares":1000}]}}`)
 	req, err := http.NewRequest("POST", "/portfolio", bytes.NewBuffer(jsonStr))

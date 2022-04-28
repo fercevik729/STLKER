@@ -3,24 +3,25 @@ module github.com/fercevik729/STLKER/octopus
 go 1.17
 
 require (
+	github.com/fercevik729/STLKER/eagle v0.0.0-20220417062957-d29a81bb055d
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/joho/godotenv v1.4.0
+	github.com/mattn/go-sqlite3 v1.14.12
+	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	gorm.io/driver/sqlite v1.3.1
+	gorm.io/gorm v1.23.4
 )
 
 require (
-	github.com/Masterminds/squirrel v1.5.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
-	github.com/mattn/go-sqlite3 v1.14.12 // indirect
-	gorm.io/driver/sqlite v1.3.1 // indirect
-	gorm.io/gorm v1.23.4 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
 require (
 	github.com/felixge/httpsnoop v1.0.2 // indirect
-	github.com/fercevik729/STLKER/watcher-api v0.0.0-20220402194202-1882e9f3ea5e // direct
 	github.com/golang/protobuf v1.5.2 // indirect
 	golang.org/x/net v0.0.0-20220401154927-543a649e0bdd // indirect
 	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f // indirect
