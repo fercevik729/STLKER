@@ -13,14 +13,14 @@ import (
 )
 
 func main() {
-	l := log.New(os.Stdout, "watcher-api", log.LstdFlags)
+	l := log.New(os.Stdout, "eagle", log.LstdFlags)
 
 	// Create tcp socket for incoming connections
 	lis, err := net.Listen("tcp", "0.0.0.0:9090")
 	if err != nil {
 		l.Fatal("Unable to listen, err:", err)
 	}
-	l.Println("[DEBUG] gRPC server listening at 0.0.0.0:9090")
+	l.Println("[DEBUG] Starting eagle on port 9090")
 
 	// Initialize the gRPC server instance
 	sp := data.NewStockPrices(l)

@@ -90,7 +90,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker, username := c.getSecurityVars("Read Security", r)
+	portName, ticker, username := c.retrieveSecurityVars("Read Security", r)
 	db, err := newSqlDBConn(databasePath)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connct to database", http.StatusInternalServerError)
@@ -198,7 +198,7 @@ func (c *ControlHandler) EditSecurity(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
-	portName, ticker, username := c.getSecurityVars("Delete Security", r)
+	portName, ticker, username := c.retrieveSecurityVars("Delete Security", r)
 	// Connect to database
 	db, err := newSqlDBConn(databasePath)
 	if err != nil {

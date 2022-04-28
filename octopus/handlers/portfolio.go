@@ -100,9 +100,9 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	data.FromJSON(&reqPort, r.Body)
 
 	// Validate the portfolio
-	ok := validatePortfolio(&reqPort)
+	ok, msg := validatePortfolio(&reqPort)
 	if !ok {
-		c.logHTTPError(w, "Bad portfolio request. Name shouldn't be empty, contain spaces, and must be alphanumeric", http.StatusBadRequest)
+		c.logHTTPError(w, msg, http.StatusBadRequest)
 		return
 	}
 	// Set username of the requested portfolio
@@ -135,7 +135,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 	// Create portfolio entry
 	db.Debug().Create(&reqPort)
-	msg := fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
+	msg = fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
 	c.l.Printf("[DEBUG] %s", msg)
 
 	// Write to response body
