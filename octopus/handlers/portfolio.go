@@ -39,7 +39,7 @@ type STLKERModel struct {
 type Portfolio struct {
 	STLKERModel
 	// Name is the name of the portfolio
-	Name     string `json:"Name" validate:"required,alphanum,min=3,max=30"`
+	Name     string `json:"Name"`
 	Username string `json:"Username"`
 	// Stocks is a slice of Security structs
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
@@ -221,7 +221,6 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	db.Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
 	// Check if any results were found
 	if port.ID == 0 {
-		c.l.Println("[DEBUG] No results found")
 		c.logHTTPError(w, fmt.Sprintf("no results found with name %s, and user %s", name, username), http.StatusBadRequest)
 		return
 	}
@@ -256,6 +255,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	err := replacePortfolio(name, username, &reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Send response message
@@ -274,6 +274,7 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 	err := replacePortfolio(name, username, nil)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	data.ToJSON(&ResponseMessage{
 		Msg: fmt.Sprintf("Deleted portfolio %s", name),

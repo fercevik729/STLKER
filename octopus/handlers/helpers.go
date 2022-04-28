@@ -3,11 +3,22 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
+
+// ReadEnvVar reads an environmental variable specified by key after loading vars.env
+func ReadEnvVar(key string) (string, error) {
+	err := godotenv.Load("vars.env")
+	if err != nil {
+		return "", err
+	}
+	return os.Getenv(key), nil
+}
 
 // logHTTPError logs the error message for a handler with the specified message and status code
 func (c *ControlHandler) logHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {

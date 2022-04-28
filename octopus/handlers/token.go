@@ -3,13 +3,11 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"reflect"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/golang-jwt/jwt"
-	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -18,8 +16,8 @@ var encryptKey string
 
 type User struct {
 	gorm.Model
-	Username string `json:"Username" validate:"required,excludesall=(){}[]|!%^@:;&_'-+<>,min=6,max=30"`
-	Password string `json:"Password" validate:"required,excludesall=(){}[]|!%^@:;&_'-+<>,min=10,max=100, nefield=Username"`
+	Username string `json:"Username"`
+	Password string `json:"Password"`
 }
 
 type Claims struct {
@@ -31,7 +29,7 @@ type Claims struct {
 // Initialize the encryptkey
 func init() {
 	var err error
-	encryptKey, err = readEnvVar("KEY")
+	encryptKey, err = ReadEnvVar("KEY")
 	if err != nil {
 		panic(err)
 	}
@@ -166,7 +164,6 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	// Create database connection
 	db, err := newGormDBConn(databasePath)
-	db.AutoMigrate(&User{})
 	if err != nil {
 		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -261,13 +258,4 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	}
 	return http.StatusOK, claims
 
-}
-
-// Read an environmental variable
-func readEnvVar(key string) (string, error) {
-	err := godotenv.Load("key.env")
-	if err != nil {
-		return "", err
-	}
-	return os.Getenv(key), nil
 }

@@ -16,7 +16,24 @@ import (
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
+
+func init() {
+	// Get database name
+	dbName, err := handlers.ReadEnvVar("DB_NAME")
+	if err != nil {
+		panic(err)
+	}
+	// Initialize database
+	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+	// Migrate the schemas
+	db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
+}
 
 func main() {
 	l := log.New(os.Stdout, "octopus", log.LstdFlags)

@@ -52,6 +52,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	db, err := newSqlDBConn(databasePath)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		return
 	}
 	defer db.Close()
 
@@ -59,6 +60,7 @@ func (c *ControlHandler) AddSecurity(w http.ResponseWriter, r *http.Request) {
 	portId, err := getPortfolioId(db, portName, username)
 	if err != nil {
 		c.logHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s, and user: %s", portName, username), http.StatusBadRequest)
+		return
 	}
 
 	// Create insert sql query
