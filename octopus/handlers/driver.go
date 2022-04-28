@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fercevik729/STLKER/watcher-api/data"
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	"github.com/fercevik729/STLKER/eagle/data"
+	pb "github.com/fercevik729/STLKER/eagle/protos"
 )
 
 // Info returns a pointer to a Stock struct and an error if one arises

@@ -5,5 +5,6 @@ package-lock.json
 package.json
 static/build
 key.txt
+*.env
 *.db
 cookies.txt

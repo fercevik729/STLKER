@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fercevik729/STLKER/eagle/protos"
 	"github.com/fercevik729/STLKER/octopus/handlers"
-	"github.com/fercevik729/STLKER/watcher-api/protos"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

@@ -3,7 +3,7 @@ package handlers
 import (
 	"log"
 
-	pb "github.com/fercevik729/STLKER/watcher-api/protos"
+	pb "github.com/fercevik729/STLKER/eagle/protos"
 )
 
 // ControlHandler is a http.Handler

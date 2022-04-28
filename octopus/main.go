@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	p "github.com/fercevik729/STLKER/eagle/protos"
 	"github.com/fercevik729/STLKER/octopus/handlers"
 	mw "github.com/fercevik729/STLKER/octopus/middleware"
-	p "github.com/fercevik729/STLKER/watcher-api/protos"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
