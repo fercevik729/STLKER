@@ -3,29 +3,38 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 	"github.com/golang-jwt/jwt"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-// TODO: make this more secure
-const jwtKey = "mysecretpassword"
+var encryptKey string
 
 type User struct {
 	gorm.Model
-	// TODO: validate username
-	Username string `json:"Username"`
-	Password string `json:"Password"`
+	Username string `json:"Username" validate:"required,excludesall=(){}[]|!%^@:;&_'-+<>,min=6,max=30"`
+	Password string `json:"Password" validate:"required,excludesall=(){}[]|!%^@:;&_'-+<>,min=10,max=100, nefield=Username"`
 }
 
 type Claims struct {
 	Name  string `json:"Name"`
 	Admin bool   `json:"Admin"`
 	jwt.StandardClaims
+}
+
+// Initialize the encryptkey
+func init() {
+	var err error
+	encryptKey, err = readEnvVar("KEY")
+	if err != nil {
+		panic(err)
+	}
 }
 
 // LogIn handles requests to /login and creates JWTs for valid users
@@ -78,7 +87,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Init access JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Make sure key is a byte array
-	tokenStr, err := token.SignedString([]byte(jwtKey))
+	tokenStr, err := token.SignedString([]byte(encryptKey))
 	if err != nil {
 		c.logHTTPError(w, "couldn't create JWT", http.StatusInternalServerError)
 		return
@@ -92,7 +101,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	rfToken := jwt.NewWithClaims(jwt.SigningMethodHS256, rfClaims)
-	rfTokenStr, err := rfToken.SignedString([]byte(jwtKey))
+	rfTokenStr, err := rfToken.SignedString([]byte(encryptKey))
 	if err != nil {
 		c.logHTTPError(w, "couldn't create refresh JWT", http.StatusInternalServerError)
 		return
@@ -150,6 +159,10 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
 		return
 	}
+	ok, msg := validateStruct(creds)
+	if ok {
+		c.logHTTPError(w, msg, http.StatusBadRequest)
+	}
 	// Create database connection
 	db, err := newGormDBConn(databasePath)
 	db.AutoMigrate(&User{})
@@ -196,7 +209,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	// Create new token with claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Make sure key is a byte array
-	tokenStr, err := token.SignedString([]byte(jwtKey))
+	tokenStr, err := token.SignedString([]byte(encryptKey))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -232,7 +245,7 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	tknStr := cookie.Value
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtKey), nil
+		return []byte(encryptKey), nil
 	})
 
 	switch err {
@@ -247,4 +260,13 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	}
 	return http.StatusOK, claims
 
+}
+
+// Read an environmental variable
+func readEnvVar(key string) (string, error) {
+	err := godotenv.Load("key.env")
+	if err != nil {
+		return "", err
+	}
+	return os.Getenv(key), nil
 }

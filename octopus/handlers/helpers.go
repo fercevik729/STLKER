@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -184,4 +185,13 @@ func newSqlDBConn(databaseName string) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// validateStruct validates a user-provided structure
+func validateStruct(structure interface{}) (bool, string) {
+	err := validator.New().Struct(structure)
+	if _, ok := err.(*validator.InvalidValidationError); ok {
+		return false, err.Error()
+	}
+	return true, ""
 }

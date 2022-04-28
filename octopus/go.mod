@@ -3,22 +3,23 @@ module github.com/fercevik729/STLKER/octopus
 go 1.17
 
 require (
+	github.com/go-playground/validator/v10 v10.10.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/joho/godotenv v1.4.0
+	github.com/mattn/go-sqlite3 v1.14.12
+	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	gorm.io/driver/sqlite v1.3.1
+	gorm.io/gorm v1.23.4
 )
 
 require (
-	github.com/Masterminds/squirrel v1.5.2 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/go-playground/locales v0.14.0 // indirect
+	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
-	github.com/mattn/go-sqlite3 v1.14.12 // indirect
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
-	gorm.io/driver/sqlite v1.3.1 // indirect
-	gorm.io/gorm v1.23.4 // indirect
+	github.com/leodido/go-urn v1.2.1 // indirect
 )
 
 require (
