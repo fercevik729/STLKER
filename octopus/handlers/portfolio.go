@@ -202,6 +202,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 		profits = append(profits, prof)
 	}
+	c.setCache(r, &profits)
 
 	data.ToJSON(profits, w)
 

@@ -15,9 +15,11 @@ func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 		var err error
 		// Get the key
 		key := c.retrieveUsername(r) + r.RequestURI
+		// A single slash corresponds to a call made to GetAll
+		// Two slashes corresponds to a call made to GetPortfolio
+		// Three slashes corresponds to a call made to ReadSecurity
 		slashCount := strings.Count(r.RequestURI, "/")
 		switch slashCount {
-		// TODO: fix this
 		// All portfolios for a user
 		case 1:
 			if c.retrieveAdmin(r) {
