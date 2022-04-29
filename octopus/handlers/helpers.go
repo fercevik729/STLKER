@@ -38,6 +38,21 @@ func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
 	return nil
 }
 
+func (c *ControlHandler) setStockCache(r *http.Request, value interface{}) error {
+	ctx := context.Background()
+	key := r.RequestURI
+
+	if err := c.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: value,
+		TTL:   15 * time.Minute,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 // logHTTPError logs the error message for a handler with the specified message and status code
 func (c *ControlHandler) logHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
 	c.l.Printf("[ERROR] %s\n", errorMsg)

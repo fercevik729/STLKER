@@ -113,8 +113,10 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Add cache middleware to getRouter
 	getR.Use(handlers.Authenticate, control.Cache)
 
-	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
-	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")
+	stockR := sm.Methods(http.MethodGet).Subrouter()
+	stockR.HandleFunc("/stocks/more/{ticker}", control.MoreInfo).Methods("GET")
+	stockR.HandleFunc("/stocks/{ticker:[A-Z]+}/{currency}", control.GetInfo).Methods("GET")
+	stockR.Use(control.Cache)
 
 	postR := sm.Methods(http.MethodPost).Subrouter()
 	postR.HandleFunc("/portfolios", control.CreatePortfolio)

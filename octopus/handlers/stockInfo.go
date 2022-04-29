@@ -24,6 +24,7 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	// Write the data to the client
 	w.Header().Set("Content-Type", "application/json")
+	c.setStockCache(r, &stock)
 	data.ToJSON(stock, w)
 
 }
@@ -41,5 +42,6 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	c.setStockCache(r, &co)
 	data.ToJSON(co, w)
 }

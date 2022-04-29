@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	d "github.com/fercevik729/STLKER/eagle/data"
 	"github.com/fercevik729/STLKER/octopus/data"
 )
 
@@ -13,30 +14,39 @@ import (
 func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		// Get the key
-		key := c.retrieveUsername(r) + r.RequestURI
-		// A single slash corresponds to a call made to GetAll
-		// Two slashes corresponds to a call made to GetPortfolio
-		// Three slashes corresponds to a call made to ReadSecurity
-		slashCount := strings.Count(r.RequestURI, "/")
-		switch slashCount {
-		// All portfolios for a user
-		case 1:
-			if c.retrieveAdmin(r) {
-				var content map[string][]string
+		// Check the URIs to match the structs
+		if strings.Contains(r.RequestURI, "/stocks/more/") {
+			var co d.MoreStock
+			err = c.getFromCache(r.RequestURI, &co, w)
+		} else if strings.Contains(r.RequestURI, "/stocks/") {
+			var s d.Stock
+			err = c.getFromCache(r.RequestURI, &s, w)
+		} else {
+			// A single slash corresponds to a call made to GetAll
+			// Two slashes corresponds to a call made to GetPortfolio
+			// Three slashes corresponds to a call made to ReadSecurity
+			// Get the key
+			key := c.retrieveUsername(r) + r.RequestURI
+			slashCount := strings.Count(r.RequestURI, "/")
+			switch slashCount {
+			// All portfolios for a user
+			case 1:
+				if c.retrieveAdmin(r) {
+					var content map[string][]string
+					err = c.getFromCache(key, &content, w)
+				} else {
+					var content []*Profits
+					err = c.getFromCache(key, &content, w)
+				}
+			// Single portfolio
+			case 2:
+				var content Profits
 				err = c.getFromCache(key, &content, w)
-			} else {
-				var content []*Profits
+			// Single security
+			case 3:
+				var content *Security
 				err = c.getFromCache(key, &content, w)
 			}
-		// Single portfolio
-		case 2:
-			var content Profits
-			err = c.getFromCache(key, &content, w)
-		// Single security
-		case 3:
-			var content *Security
-			err = c.getFromCache(key, &content, w)
 		}
 
 		// If there was an error retrieving, serve the next handler
