@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
+	"github.com/go-redis/cache/v8"
 	"github.com/gorilla/mux"
 )
 
@@ -235,6 +237,17 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	ctx := context.Background()
+	key := c.retrieveUsername(r) + r.RequestURI
+
+	if err := c.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: profits,
+		TTL:   15 * time.Minute,
+	}); err != nil {
+		c.logHTTPError(w, "Couldn't cache the portfolio", http.StatusInternalServerError)
 	}
 	data.ToJSON(profits, w)
 

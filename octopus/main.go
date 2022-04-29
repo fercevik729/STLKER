@@ -11,7 +11,7 @@ import (
 
 	p "github.com/fercevik729/STLKER/eagle/protos"
 	"github.com/fercevik729/STLKER/octopus/handlers"
-	mw "github.com/fercevik729/STLKER/octopus/middleware"
+	"github.com/go-redis/redis/v8"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
@@ -19,6 +19,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+var ring *redis.Ring
 
 // TODO: create swagger documentation
 func init() {
@@ -34,6 +36,14 @@ func init() {
 	}
 	// Migrate the schemas
 	db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
+
+	// Initialize redis options
+	ring = redis.NewRing(&redis.RingOptions{
+		Addrs: map[string]string{
+			"server1": ":6379",
+		},
+	})
+
 }
 
 func main() {
@@ -51,7 +61,7 @@ func main() {
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, wc)
+	control := handlers.NewControlHandler(l, wc, ring)
 	// Register routes
 	registerRoutes(sm, control)
 
@@ -97,10 +107,10 @@ func main() {
 func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Create subrouters and register handlers
 	getR := sm.Methods(http.MethodGet).Subrouter()
-	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
+	getR.Handle("/portfolios/{name}", control.Cache(http.HandlerFunc(control.GetPortfolio)))
 	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
-	getR.Use(mw.Authenticate)
+	getR.Use(handlers.Authenticate)
 
 	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
 	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")
@@ -108,7 +118,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	postR := sm.Methods(http.MethodPost).Subrouter()
 	postR.HandleFunc("/portfolios", control.CreatePortfolio)
 	postR.HandleFunc("/portfolios/{name}", control.CreateSecurity)
-	postR.Use(mw.Authenticate)
+	postR.Use(handlers.Authenticate)
 
 	// Authentication routes
 	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
@@ -119,11 +129,11 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	putR := sm.Methods(http.MethodPut).Subrouter()
 	putR.HandleFunc("/portfolios/{name}", control.UpdateSecurity)
 	putR.HandleFunc("/portfolios", control.UpdatePortfolio)
-	putR.Use(mw.Authenticate)
+	putR.Use(handlers.Authenticate)
 
 	deleteR := sm.Methods(http.MethodDelete).Subrouter()
 	deleteR.HandleFunc("/portfolios/{name}", control.DeletePortfolio)
 	deleteR.HandleFunc("/portfolios/{name}/{ticker}", control.DeleteSecurity)
-	deleteR.Use(mw.Authenticate)
+	deleteR.Use(handlers.Authenticate)
 
 }
