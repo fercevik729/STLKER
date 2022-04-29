@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/go-redis/cache/v8"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -18,6 +21,21 @@ func ReadEnvVar(key string) (string, error) {
 		return "", err
 	}
 	return os.Getenv(key), nil
+}
+
+func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
+	ctx := context.Background()
+	key := c.retrieveUsername(r) + r.RequestURI
+
+	if err := c.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: value,
+		TTL:   15 * time.Minute,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // logHTTPError logs the error message for a handler with the specified message and status code

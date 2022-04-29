@@ -107,10 +107,11 @@ func main() {
 func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Create subrouters and register handlers
 	getR := sm.Methods(http.MethodGet).Subrouter()
-	getR.Handle("/portfolios/{name}", control.Cache(http.HandlerFunc(control.GetPortfolio)))
+	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
-	getR.Use(handlers.Authenticate)
+	// Add cache middleware to getRouter
+	getR.Use(handlers.Authenticate, control.Cache)
 
 	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
 	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")

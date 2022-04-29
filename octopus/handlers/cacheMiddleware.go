@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/fercevik729/STLKER/octopus/data"
 )
@@ -11,17 +12,44 @@ import (
 // 15 minutes
 func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: implement this for various GET routes
+		var err error
 		// Get the key
 		key := c.retrieveUsername(r) + r.RequestURI
-		var profits Profits
-		// Get the portfolio from the cache
-		if err := c.cache.Get(context.Background(), key, &profits); err == nil {
-			c.l.Println("[INFO] Using cache for key", key)
-			data.ToJSON(profits, w)
-		} else {
+		slashCount := strings.Count(r.RequestURI, "/")
+		switch slashCount {
+		// TODO: fix this
+		// All portfolios for a user
+		case 1:
+			if c.retrieveAdmin(r) {
+				var content map[string][]string
+				err = c.getFromCache(key, &content, w)
+			} else {
+				var content []*Profits
+				err = c.getFromCache(key, &content, w)
+			}
+		// Single portfolio
+		case 2:
+			var content Profits
+			err = c.getFromCache(key, &content, w)
+		// Single security
+		case 3:
+			var content *Security
+			err = c.getFromCache(key, &content, w)
+		}
+
+		// If there was an error retrieving, serve the next handler
+		if err != nil {
 			next.ServeHTTP(w, r)
 		}
 
 	})
+}
+
+func (c *ControlHandler) getFromCache(key string, content interface{}, w http.ResponseWriter) error {
+	err := c.cache.Get(context.Background(), key, &content)
+	if err == nil {
+		c.l.Println("[INFO] Using cache for key", key)
+		data.ToJSON(content, w)
+	}
+	return err
 }

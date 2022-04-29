@@ -99,6 +99,10 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Update the security
 	c.updateSecurities(&security)
 	// Write to responsewriter
+	err = c.setCache(r, &security)
+	if err != nil {
+		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
+	}
 	data.ToJSON(&security, w)
 }
 

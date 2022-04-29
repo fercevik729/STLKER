@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/octopus/data"
-	"github.com/go-redis/cache/v8"
 	"github.com/gorilla/mux"
 )
 
@@ -185,8 +183,12 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 		// Return the table in json format
 		data.ToJSON(table, w)
-		return
-
+		// Cache it as well
+		err = c.setCache(r, table)
+		if err != nil {
+			c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
+			return
+		}
 	}
 	// Otherwise retrieve all portfolio data for a user
 	db.Where("username=?", username).Preload("Securities").Find(&ports)
@@ -238,16 +240,9 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	ctx := context.Background()
-	key := c.retrieveUsername(r) + r.RequestURI
-
-	if err := c.cache.Set(&cache.Item{
-		Ctx:   ctx,
-		Key:   key,
-		Value: profits,
-		TTL:   15 * time.Minute,
-	}); err != nil {
-		c.logHTTPError(w, "Couldn't cache the portfolio", http.StatusInternalServerError)
+	err = c.setCache(r, profits)
+	if err != nil {
+		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
 	}
 	data.ToJSON(profits, w)
 
