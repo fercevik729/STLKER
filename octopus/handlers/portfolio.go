@@ -242,15 +242,21 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Get variables
-	name := mux.Vars(r)["name"]
 	username := c.retrieveUsername(r)
 
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 	reqPort.Username = username
+	name := reqPort.Name
 
 	c.l.Println("[INFO] Updating portfolio:", name, "for user:", username)
+
+	// Check if request payload is empty
+	if reflect.DeepEqual(reqPort, Portfolio{}) {
+		c.logHTTPError(w, "Bad request payload", http.StatusBadRequest)
+		return
+	}
 	// Call helper method
 	err := replacePortfolio(name, username, &reqPort)
 	if err != nil {

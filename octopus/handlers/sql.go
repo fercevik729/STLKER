@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"fmt"
 	"reflect"
 
@@ -41,26 +40,10 @@ func replacePortfolio(portName string, username string, newPort *Portfolio) erro
 }
 
 // getPortfolioId returns a portfolio's id provided its name and the username associated with it
-func getPortfolioId(db *sql.DB, portName string, username string) (int, error) {
-	// Execute query
-	rows, err := db.Query("SELECT id FROM portfolios WHERE name=? AND username=?", portName, username)
-	if err != nil {
-		return -1, err
-	}
-	defer rows.Close()
-	err = rows.Err()
-	if err != nil {
-		return -1, err
-	}
-	// Grab the id of the portfolio
-	var id int
-	for rows.Next() {
-		err = rows.Scan(&id)
-		if err != nil {
-			return -1, err
-		}
-	}
-	return id, nil
+func getPortfolioId(db *gorm.DB, portName string, username string) int {
+	var port Portfolio
+	db.Debug().Model(&Portfolio{}).Select("id").Where("name=?", portName).Where("username=?", username).First(&port)
+	return int(port.ID)
 
 }
 
@@ -72,13 +55,4 @@ func newGormDBConn(databaseName string) (*gorm.DB, error) {
 	}
 	return db, nil
 
-}
-
-// newSqlDBConn opens a new sqlite3 database connection
-func newSqlDBConn(databaseName string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", databaseName)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
 }

@@ -20,6 +20,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: create swagger documentation
 func init() {
 	// Get database name
 	dbName, err := handlers.ReadEnvVar("DB_NAME")
@@ -96,17 +97,17 @@ func main() {
 func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Create subrouters and register handlers
 	getR := sm.Methods(http.MethodGet).Subrouter()
-	getR.HandleFunc("/portfolio/{name}", control.GetPortfolio)
+	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
-	getR.HandleFunc("/portfolio/{name}/{ticker}", control.ReadSecurity)
+	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
 	getR.Use(mw.Authenticate)
 
 	sm.HandleFunc("/info/{ticker}/{currency}", control.GetInfo).Methods("GET")
 	sm.HandleFunc("/moreinfo/{ticker}", control.MoreInfo).Methods("GET")
 
 	postR := sm.Methods(http.MethodPost).Subrouter()
-	postR.HandleFunc("/portfolio", control.CreatePortfolio)
-	postR.HandleFunc("/portfolio/{name}", control.AddSecurity)
+	postR.HandleFunc("/portfolios", control.CreatePortfolio)
+	postR.HandleFunc("/portfolios/{name}", control.CreateSecurity)
 	postR.Use(mw.Authenticate)
 
 	// Authentication routes
@@ -116,13 +117,13 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
 
 	putR := sm.Methods(http.MethodPut).Subrouter()
-	putR.HandleFunc("/portfolio/{name}/{ticker}/{shares}", control.EditSecurity)
-	putR.HandleFunc("/portfolio/{name}", control.UpdatePortfolio)
+	putR.HandleFunc("/portfolios/{name}", control.UpdateSecurity)
+	putR.HandleFunc("/portfolios", control.UpdatePortfolio)
 	putR.Use(mw.Authenticate)
 
 	deleteR := sm.Methods(http.MethodDelete).Subrouter()
-	deleteR.HandleFunc("/portfolio/{name}", control.DeletePortfolio)
-	deleteR.HandleFunc("/portfolio/{name}/{ticker}", control.DeleteSecurity)
+	deleteR.HandleFunc("/portfolios/{name}", control.DeletePortfolio)
+	deleteR.HandleFunc("/portfolios/{name}/{ticker}", control.DeleteSecurity)
 	deleteR.Use(mw.Authenticate)
 
 }

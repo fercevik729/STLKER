@@ -14,6 +14,9 @@ func Info(ticker, destination string, client pb.WatcherClient) (*data.Stock, err
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")
 	}
+	if len(ticker) == 0 {
+		return nil, fmt.Errorf("ticker symbol is too short")
+	}
 	tr := &pb.TickerRequest{
 		Ticker:      ticker,
 		Destination: pb.Currencies(pb.Currencies_value[destination]),
