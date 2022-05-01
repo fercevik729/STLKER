@@ -34,7 +34,7 @@ func TestCreatePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
 	handler := http.HandlerFunc(control.CreatePortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusCreated {
@@ -72,7 +72,7 @@ func TestGetPortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
 	handler := http.HandlerFunc(control.GetPortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -108,7 +108,7 @@ func TestUpdatePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
 	handler := http.HandlerFunc(control.UpdatePortfolio)
 	handler.ServeHTTP(rr, req)
 	// Check status
@@ -147,7 +147,7 @@ func TestDeletePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn))
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
 	handler := http.HandlerFunc(control.DeletePortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {

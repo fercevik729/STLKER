@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/go-redis/cache/v8"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -18,6 +21,36 @@ func ReadEnvVar(key string) (string, error) {
 		return "", err
 	}
 	return os.Getenv(key), nil
+}
+
+func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
+	ctx := context.Background()
+	key := retrieveUsername(r) + r.RequestURI
+
+	if err := c.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: value,
+		TTL:   15 * time.Minute,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ControlHandler) setStockCache(r *http.Request, value interface{}) error {
+	ctx := context.Background()
+	key := r.RequestURI
+
+	if err := c.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: value,
+		TTL:   15 * time.Minute,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // logHTTPError logs the error message for a handler with the specified message and status code
@@ -81,10 +114,9 @@ func (c *ControlHandler) updatePrices(port *Portfolio) {
 }
 
 // retrieveUsername retrieves the username of the user who made the request from the request context
-func (c *ControlHandler) retrieveUsername(r *http.Request) string {
+func retrieveUsername(r *http.Request) string {
 	// Get username from request context
 	username := r.Context().Value(Username{})
-	// c.l.Println("[INFO] Got username:", username)
 
 	v, ok := username.(string)
 	if ok {
@@ -95,7 +127,7 @@ func (c *ControlHandler) retrieveUsername(r *http.Request) string {
 
 // retrieveAdmin retrieves a boolean value from a request's context
 // to specify if the user was the admin
-func (c *ControlHandler) retrieveAdmin(r *http.Request) bool {
+func retrieveAdmin(r *http.Request) bool {
 	// Get email from request context
 	isAdmin := r.Context().Value(IsAdmin{})
 	// c.l.Println("[INFO] User is admin:", isAdmin)
@@ -107,14 +139,13 @@ func (c *ControlHandler) retrieveAdmin(r *http.Request) bool {
 	return false
 }
 
-// getSecurityVars returns a portfolioName, ticker string vars, and username from the request.
+// retrieveSecurityVars returns a portfolioName, ticker string vars, and username from the request.
 // It also logs the method being handled
-func (c *ControlHandler) retrieveSecurityVars(method string, r *http.Request) (portName string, ticker string, username string) {
+func retrieveSecurityVars(r *http.Request) (portName string, ticker string, username string) {
 	// Get URI vars
 	vars := mux.Vars(r)
 	portName = vars["name"]
 	ticker = vars["ticker"]
 	// Log endpoint
-	c.l.Printf("[INFO] Handle %s for portfolio: %s, for ticker: %s", method, portName, ticker)
-	return portName, ticker, c.retrieveUsername(r)
+	return portName, ticker, retrieveUsername(r)
 }

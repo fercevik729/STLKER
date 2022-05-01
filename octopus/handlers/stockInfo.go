@@ -14,8 +14,6 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	ticker := vars["ticker"]
 	destCurr := vars["currency"]
 
-	c.l.Println("[DEBUG] Handle GetInfo for", ticker, "in", destCurr)
-
 	// Get the stock information
 	stock, err := Info(ticker, destCurr, c.client)
 	if err != nil {
@@ -24,6 +22,7 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	// Write the data to the client
 	w.Header().Set("Content-Type", "application/json")
+	c.setStockCache(r, &stock)
 	data.ToJSON(stock, w)
 
 }
@@ -31,7 +30,6 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	// Retrieve URI variable
 	vars := mux.Vars(r)
 	ticker := vars["ticker"]
-	c.l.Println("[DEBUG] Handle MoreInfo for", ticker)
 
 	// Get the company overview
 	co, err := CompanyOverview(ticker, c.client)
@@ -41,5 +39,6 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	c.setStockCache(r, &co)
 	data.ToJSON(co, w)
 }

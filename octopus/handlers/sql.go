@@ -42,7 +42,7 @@ func replacePortfolio(portName string, username string, newPort *Portfolio) erro
 // getPortfolioId returns a portfolio's id provided its name and the username associated with it
 func getPortfolioId(db *gorm.DB, portName string, username string) int {
 	var port Portfolio
-	db.Debug().Model(&Portfolio{}).Select("id").Where("name=?", portName).Where("username=?", username).First(&port)
+	db.Model(&Portfolio{}).Select("id").Where("name=?", portName).Where("username=?", username).First(&port)
 	return int(port.ID)
 
 }

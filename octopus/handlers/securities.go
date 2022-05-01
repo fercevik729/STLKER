@@ -40,7 +40,7 @@ func (s *Security) setMoves(gain float64, change string) {
 func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName := mux.Vars(r)["name"]
-	username := c.retrieveUsername(r)
+	username := retrieveUsername(r)
 
 	// Get ticker and shares info from JSON body
 	var params securityData
@@ -82,10 +82,10 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
-	portName, ticker, username := c.retrieveSecurityVars("Read Security", r)
+	portName, ticker, username := retrieveSecurityVars(r)
 	db, err := newGormDBConn(databasePath)
 	if err != nil {
-		c.logHTTPError(w, "Couldn't connct to database", http.StatusInternalServerError)
+		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
 	}
 	// Get portfolio_id
@@ -99,13 +99,17 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Update the security
 	c.updateSecurities(&security)
 	// Write to responsewriter
+	err = c.setCache(r, &security)
+	if err != nil {
+		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
+	}
 	data.ToJSON(&security, w)
 }
 
 func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get request vars
 	portName := mux.Vars(r)["name"]
-	username := c.retrieveUsername(r)
+	username := retrieveUsername(r)
 	var sd securityData
 	data.FromJSON(&sd, r.Body)
 
@@ -136,7 +140,7 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
-	portName, ticker, username := c.retrieveSecurityVars("Delete Security", r)
+	portName, ticker, username := retrieveSecurityVars(r)
 	// Connect to database
 	db, err := newGormDBConn(databasePath)
 	if err != nil {
