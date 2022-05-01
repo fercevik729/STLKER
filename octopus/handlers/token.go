@@ -70,7 +70,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	if usr.Username == "admin" {
 		admin = true
 	}
-	c.l.Println("[INFO] Handle Log In for user:", usr.Username)
+	c.l.Println("[INFO] Logged in user:", usr.Username)
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
@@ -129,7 +129,6 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 
 // LogOut deletes the token cookie
 func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
-	c.l.Print("[INFO] Handle Log Out")
 	// Set max age to < 0 for token and refresh token cookies in order to delete them
 	http.SetCookie(w, &http.Cookie{
 		Name:   "token",
@@ -139,12 +138,12 @@ func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		Name:   "refreshToken",
 		MaxAge: -1,
 	})
+	c.l.Println("[INFO] Logged out user:", retrieveUsername(r))
 
 }
 
 // SignUp handles requests to /signup and adds new users to the db
 func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	c.l.Println("[INFO] Handle Sign Up")
 	// Destruct incoming request payload
 	var (
 		creds     User
@@ -187,6 +186,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Add credentials to database
 	db.Model(&User{}).Create(&creds)
+	c.l.Println("[INFO] Signed up user:", creds.Username)
 	w.Write([]byte(fmt.Sprintf("Happy Investing! %s\n", creds.Username)))
 
 }
@@ -194,8 +194,6 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 // Refresh handles requests to /refresh and regenerates tokens if the current token
 // is within a minute of expiry
 func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-
-	c.l.Println("[INFO] Handle refresh")
 	status, claims := ValidateJWT(r, "refreshToken")
 	if status != http.StatusOK {
 		c.logHTTPError(w, "bad refresh token request", status)

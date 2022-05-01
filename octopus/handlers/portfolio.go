@@ -106,10 +106,8 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// Set username of the requested portfolio
-	username := c.retrieveUsername(r)
+	username := retrieveUsername(r)
 	reqPort.Username = username
-
-	c.l.Println("[INFO] Creating portfolio:", reqPort.Name, "for user:", username)
 
 	// Open sqlite db connection
 	db, err := newGormDBConn(databasePath)
@@ -147,10 +145,8 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	username := c.retrieveUsername(r)
-	isAdmin := c.retrieveAdmin(r)
-	c.l.Printf("[INFO] Getting all portfolios for user: %s\n", username)
-
+	username := retrieveUsername(r)
+	isAdmin := retrieveAdmin(r)
 	var ports []Portfolio
 
 	// Open database
@@ -211,8 +207,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter and username
 	name := mux.Vars(r)["name"]
-	username := c.retrieveUsername(r)
-	c.l.Println("[INFO] Getting portfolio:", name, "and user:", username)
+	username := retrieveUsername(r)
 
 	// Open sqlite db connection
 	db, err := newGormDBConn(databasePath)
@@ -251,15 +246,13 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 
 func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Get variables
-	username := c.retrieveUsername(r)
+	username := retrieveUsername(r)
 
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 	reqPort.Username = username
 	name := reqPort.Name
-
-	c.l.Println("[INFO] Updating portfolio:", name, "for user:", username)
 
 	// Check if request payload is empty
 	if reflect.DeepEqual(reqPort, Portfolio{}) {
@@ -283,8 +276,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 
 func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
-	username := c.retrieveUsername(r)
-	c.l.Println("[INFO] Deleting portfolio for:", name, "and user:", username)
+	username := retrieveUsername(r)
 	// Delete portfolio and all child securities
 	err := replacePortfolio(name, username, nil)
 	if err != nil {

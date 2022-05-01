@@ -26,12 +26,12 @@ func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 			// Two slashes corresponds to a call made to GetPortfolio
 			// Three slashes corresponds to a call made to ReadSecurity
 			// Get the key
-			key := c.retrieveUsername(r) + r.RequestURI
+			key := retrieveUsername(r) + r.RequestURI
 			slashCount := strings.Count(r.RequestURI, "/")
 			switch slashCount {
 			// All portfolios for a user
 			case 1:
-				if c.retrieveAdmin(r) {
+				if retrieveAdmin(r) {
 					var content map[string][]string
 					err = c.getFromCache(key, &content, w)
 				} else {
@@ -60,7 +60,7 @@ func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 func (c *ControlHandler) getFromCache(key string, content interface{}, w http.ResponseWriter) error {
 	err := c.cache.Get(context.Background(), key, &content)
 	if err == nil {
-		c.l.Println("[INFO] Using cache for key", key)
+		//c.l.Println("[INFO] Using cache for key", key)
 		data.ToJSON(content, w)
 	}
 	return err
