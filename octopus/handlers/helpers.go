@@ -15,12 +15,12 @@ import (
 )
 
 // ReadEnvVar reads an environmental variable specified by key after loading vars.env
-func ReadEnvVar(key string) (string, error) {
+func ReadEnvVar(key string) string {
 	err := godotenv.Load("vars.env")
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return os.Getenv(key), nil
+	return os.Getenv(key)
 }
 
 func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
@@ -65,7 +65,7 @@ func (c *ControlHandler) updateDB(port *Portfolio) error {
 	// Update prices using gRPC API
 	c.updatePrices(port)
 	// Delete previous portfolio and replace it with updated one
-	return replacePortfolio(port.Name, port.Username, port)
+	return c.replacePortfolio(port.Name, port.Username, port)
 
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -21,13 +22,14 @@ import (
 )
 
 var ring *redis.Ring
+var dbName string
 
 // TODO: create swagger documentation
 func init() {
 	// Get database name
-	dbName, err := handlers.ReadEnvVar("DB_NAME")
-	if err != nil {
-		panic(err)
+	dbName = handlers.ReadEnvVar("DB_NAME")
+	if dbName == "" {
+		panic(errors.New("couldn't retrieve DB_NAME"))
 	}
 	// Initialize database
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
@@ -61,7 +63,7 @@ func main() {
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, wc, ring)
+	control := handlers.NewControlHandler(l, wc, ring, dbName)
 	// Register routes
 	registerRoutes(sm, control)
 

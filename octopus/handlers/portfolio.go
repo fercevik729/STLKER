@@ -21,8 +21,6 @@ type NamePair struct {
 	Username string
 }
 
-const databasePath string = "./database/stlker.db"
-
 type ResponseMessage struct {
 	Msg string `json:"Message"`
 }
@@ -110,7 +108,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	reqPort.Username = username
 
 	// Open sqlite db connection
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -150,7 +148,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	var ports []Portfolio
 
 	// Open database
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -210,7 +208,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	username := retrieveUsername(r)
 
 	// Open sqlite db connection
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -260,7 +258,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// Call helper method
-	err := replacePortfolio(name, username, &reqPort)
+	err := c.replacePortfolio(name, username, &reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -278,7 +276,7 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 	// Delete portfolio and all child securities
-	err := replacePortfolio(name, username, nil)
+	err := c.replacePortfolio(name, username, nil)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return

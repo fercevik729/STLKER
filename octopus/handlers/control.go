@@ -15,10 +15,11 @@ type ControlHandler struct {
 	l      *log.Logger
 	client pb.WatcherClient
 	cache  *cache.Cache
+	dbName string
 }
 
 // NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring) *ControlHandler {
+func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring, db string) *ControlHandler {
 	return &ControlHandler{
 		l:      log,
 		client: wc,
@@ -26,5 +27,6 @@ func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Rin
 			Redis:      rOptions,
 			LocalCache: cache.NewTinyLFU(1000, time.Minute),
 		}),
+		dbName: db,
 	}
 }

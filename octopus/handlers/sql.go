@@ -10,14 +10,14 @@ import (
 
 // replacePortfolio replaces a portfolio of name "portName" for a user "username" with
 // a new portfolio struct "newPort"
-func replacePortfolio(portName string, username string, newPort *Portfolio) error {
+func (c *ControlHandler) replacePortfolio(portName string, username string, newPort *Portfolio) error {
 	// Declare vars
 	var (
 		port Portfolio
 		sec  Security
 	)
 	// Create a new gorm db connection
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		return err
 	}

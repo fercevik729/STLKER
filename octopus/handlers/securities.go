@@ -50,7 +50,7 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 	shares := params.Shares
 
 	// Create sql db instance
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -83,7 +83,7 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName, ticker, username := retrieveSecurityVars(r)
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -120,7 +120,7 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Create sql db instance
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -142,7 +142,7 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker, username := retrieveSecurityVars(r)
 	// Connect to database
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return

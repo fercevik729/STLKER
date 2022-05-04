@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -28,11 +29,62 @@ type Claims struct {
 
 // Initialize the encryptkey
 func init() {
-	var err error
-	encryptKey, err = ReadEnvVar("KEY")
-	if err != nil {
-		panic(err)
+	encryptKey = ReadEnvVar("KEY")
+	if encryptKey == "" {
+		panic(errors.New("couldn't retrieve KEY env variable"))
 	}
+}
+
+// SignUp handles requests to /signup and adds new users to the db
+func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
+	// Destruct incoming request payload
+	var (
+		creds     User
+		otherUser User
+		err       error
+	)
+	data.FromJSON(&creds, r.Body)
+	// If the credentials are empty don't sign them up
+	if creds.Username == "" || creds.Password == "" {
+		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
+		return
+	}
+	ok, msg := validateUser(creds)
+	if !ok {
+		c.logHTTPError(w, msg, http.StatusBadRequest)
+		return
+	}
+	// Create database connection
+	db, err := newGormDBConn(c.dbName)
+	if err != nil {
+		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+
+	// Check to see if there are other users with that username
+	db.Where("username=?", creds.Username).First(&otherUser)
+	if !reflect.DeepEqual(otherUser, User{}) {
+		c.logHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
+		return
+	}
+
+	// Encrypt the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.logHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
+		return
+	}
+	// Assign credential to this hash
+	creds.Password = string(hash)
+
+	// Add credentials to database
+	db.Model(&User{}).Create(&creds)
+
+	// Status code to indicate successfully created user
+	w.WriteHeader(http.StatusCreated)
+	c.l.Println("[INFO] Signed up user:", creds.Username)
+	data.ToJSON(fmt.Sprintf("Happy Investing! %s", creds.Username), w)
+
 }
 
 // LogIn handles requests to /login and creates JWTs for valid users
@@ -51,7 +103,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Connect to database
-	db, err := newGormDBConn(databasePath)
+	db, err := newGormDBConn(c.dbName)
 	if err != nil {
 		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -139,55 +191,6 @@ func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	})
 	c.l.Println("[INFO] Logged out user:", retrieveUsername(r))
-
-}
-
-// SignUp handles requests to /signup and adds new users to the db
-func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	// Destruct incoming request payload
-	var (
-		creds     User
-		otherUser User
-		err       error
-	)
-	data.FromJSON(&creds, r.Body)
-	// If the credentials are empty don't sign them up
-	if creds.Username == "" || creds.Password == "" {
-		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
-		return
-	}
-	ok, msg := validateUser(creds)
-	if ok {
-		c.logHTTPError(w, msg, http.StatusBadRequest)
-		return
-	}
-	// Create database connection
-	db, err := newGormDBConn(databasePath)
-	if err != nil {
-		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-
-	// Check to see if there are other users with that username
-	db.Where("username=?", creds.Username).First(&otherUser)
-	if !reflect.DeepEqual(otherUser, User{}) {
-		c.logHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
-		return
-	}
-
-	// Encrypt the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.logHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
-		return
-	}
-	// Assign credential to this hash
-	creds.Password = string(hash)
-
-	// Add credentials to database
-	db.Model(&User{}).Create(&creds)
-	c.l.Println("[INFO] Signed up user:", creds.Username)
-	w.Write([]byte(fmt.Sprintf("Happy Investing! %s\n", creds.Username)))
 
 }
 
