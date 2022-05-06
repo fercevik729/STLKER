@@ -140,6 +140,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	deleteR := sm.Methods(http.MethodDelete).Subrouter()
 	deleteR.HandleFunc("/portfolios/{name}", control.DeletePortfolio)
 	deleteR.HandleFunc("/portfolios/{name}/{ticker}", control.DeleteSecurity)
+	deleteR.HandleFunc("/deleteuser", control.DeleteUser)
 	deleteR.Use(handlers.Authenticate)
 
 }

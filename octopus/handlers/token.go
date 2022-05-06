@@ -229,19 +229,37 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	db, err := newGormDBConn(c.dbName)
+	if err != nil {
+		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
+		return
+	}
+	user := retrieveUsername(r)
+	var deletedUser User
+	db.Model(User{}).Where("username=?", user).Delete(&deletedUser)
+	c.l.Println("[INFO] Deleted User", user)
+}
+
 // ValidateJWT checks if the JWT token in the request token is valid and returns an http status
 // code depending on if it is along with a pointer to a claim struct
 func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
-	cookie, err := r.Cookie(tokenName)
-	switch err {
-	case nil:
-	case http.ErrNoCookie:
-		return http.StatusUnauthorized, nil
-	default:
-		return http.StatusBadRequest, nil
+	var tknStr string
+	tknStr = r.Header.Get("Authorization")
+
+	// If there was no token in the header check the cookies
+	if tknStr == "" {
+		cookie, err := r.Cookie(tokenName)
+		switch err {
+		case nil:
+		case http.ErrNoCookie:
+			return http.StatusUnauthorized, nil
+		default:
+			return http.StatusBadRequest, nil
+		}
+		tknStr = cookie.Value
 	}
 
-	tknStr := cookie.Value
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(encryptKey), nil
