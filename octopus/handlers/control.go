@@ -20,13 +20,19 @@ type ControlHandler struct {
 
 // NewControlHandler is a constructor
 func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring, db string) *ControlHandler {
+	// Check if redis options were presented
+	var c *cache.Cache
+	if rOptions != nil {
+		c = cache.New(&cache.Options{
+			Redis:      rOptions,
+			LocalCache: cache.NewTinyLFU(1000, time.Minute)})
+	} else {
+		c = nil
+	}
 	return &ControlHandler{
 		l:      log,
 		client: wc,
-		cache: cache.New(&cache.Options{
-			Redis:      rOptions,
-			LocalCache: cache.NewTinyLFU(1000, time.Minute),
-		}),
+		cache:  c,
 		dbName: db,
 	}
 }

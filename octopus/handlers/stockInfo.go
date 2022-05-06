@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/fercevik729/STLKER/octopus/data"
@@ -17,12 +18,14 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	// Get the stock information
 	stock, err := Info(ticker, destCurr, c.client)
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't get ticker information, ensure ticker and destination currency are valid")
-		w.WriteHeader(http.StatusBadRequest)
+		c.logHTTPError(w, "couldn't get ticker information, ensure ticker and destination currency are valid", http.StatusBadRequest)
+		return
 	}
 	// Write the data to the client
 	w.Header().Set("Content-Type", "application/json")
-	c.setStockCache(r, &stock)
+	if c.cache != nil {
+		c.setStockCache(r, &stock)
+	}
 	data.ToJSON(stock, w)
 
 }
@@ -34,11 +37,12 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	// Get the company overview
 	co, err := CompanyOverview(ticker, c.client)
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't get company overview information for ticker:", ticker, "err:", err)
-		w.WriteHeader(http.StatusBadRequest)
+		c.logHTTPError(w, fmt.Sprint("couldn't get company overview information for ticker:", ticker, "err:", err), http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	c.setStockCache(r, &co)
+	if c.cache != nil {
+		c.setStockCache(r, &co)
+	}
 	data.ToJSON(co, w)
 }

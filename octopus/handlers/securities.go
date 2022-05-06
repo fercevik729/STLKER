@@ -98,11 +98,15 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	db.Model(&Security{}).Select([]string{"ticker", "bought_price", "curr_price", "shares", "gain", "change"}).Where("ticker=?", ticker).Where("portfolio_id=?", portId).First(&security)
 	// Update the security
 	c.updateSecurities(&security)
-	// Write to responsewriter
-	err = c.setCache(r, &security)
+
+	// Set the cache
+	if c.cache != nil {
+		err = c.setCache(r, &security)
+	}
 	if err != nil {
 		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
 	}
+	// Write to responsewriter
 	data.ToJSON(&security, w)
 }
 

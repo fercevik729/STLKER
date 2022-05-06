@@ -196,7 +196,10 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 		profits = append(profits, prof)
 	}
-	c.setCache(r, &profits)
+
+	if c.cache != nil {
+		c.setCache(r, &profits)
+	}
 
 	data.ToJSON(profits, w)
 
@@ -234,7 +237,9 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = c.setCache(r, profits)
+	if c.cache != nil {
+		err = c.setCache(r, profits)
+	}
 	if err != nil {
 		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
 	}

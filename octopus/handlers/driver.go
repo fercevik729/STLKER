@@ -28,6 +28,9 @@ func Info(ticker, destination string, client pb.WatcherClient) (*data.Stock, err
 	if err != nil {
 		return nil, err
 	}
+	if stockInfo.Open == "" {
+		return nil, fmt.Errorf("couldn't find a security with symbol %s", ticker)
+	}
 	// Return a pointer to a Stock struct
 	return &data.Stock{
 		Symbol:        ticker,
