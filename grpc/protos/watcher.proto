@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/fercevik729/STLKER/watcher-api/protos";
+option go_package = "github.com/fercevik729/STLKER/grpc/protos";
 
 service Watcher {
 	rpc GetInfo(TickerRequest) returns (TickerResponse);
