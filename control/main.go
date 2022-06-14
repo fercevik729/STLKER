@@ -49,7 +49,7 @@ func init() {
 }
 
 func main() {
-	l := log.New(os.Stdout, "octopus", log.LstdFlags)
+	l := log.New(os.Stdout, "control", log.LstdFlags)
 
 	// Dial gRPC server
 	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -80,7 +80,7 @@ func main() {
 		WriteTimeout: 120 * time.Second,
 	}
 	go func() {
-		l.Println("[DEBUG] Starting octopus on port 8080")
+		l.Println("[DEBUG] Starting control on port 8080")
 
 		err := s.ListenAndServe()
 		if err != nil {
