@@ -7,7 +7,7 @@ import (
 	"github.com/go-redis/cache/v8"
 	"github.com/go-redis/redis/v8"
 
-	pb "github.com/fercevik729/STLKER/eagle/protos"
+	pb "github.com/fercevik729/STLKER/grpc/protos"
 )
 
 // ControlHandler is a http.Handler

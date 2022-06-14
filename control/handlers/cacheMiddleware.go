@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	d "github.com/fercevik729/STLKER/eagle/data"
-	"github.com/fercevik729/STLKER/octopus/data"
+	"github.com/fercevik729/STLKER/control/data"
+	d "github.com/fercevik729/STLKER/grpc/data"
 )
 
 // Cache is a middleware that checks if a user cached their portfolio's profits in the past

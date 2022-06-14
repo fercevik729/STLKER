@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fercevik729/STLKER/eagle/data"
-	"github.com/fercevik729/STLKER/eagle/protos"
-	"github.com/fercevik729/STLKER/octopus/handlers"
+	"github.com/fercevik729/STLKER/control/handlers"
+	"github.com/fercevik729/STLKER/grpc/data"
+	"github.com/fercevik729/STLKER/grpc/protos"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

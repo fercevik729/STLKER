@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fercevik729/STLKER/eagle/data"
+	"github.com/fercevik729/STLKER/grpc/data"
 )
 
 func TestMarketsClosed(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fercevik729/STLKER/octopus/data"
+	"github.com/fercevik729/STLKER/control/data"
 )
 
 func Authenticate(next http.Handler) http.Handler {

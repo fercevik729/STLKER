@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	p "github.com/fercevik729/STLKER/eagle/protos"
-	"github.com/fercevik729/STLKER/octopus/handlers"
+	"github.com/fercevik729/STLKER/control/handlers"
+	p "github.com/fercevik729/STLKER/grpc/protos"
 	"github.com/go-redis/redis/v8"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

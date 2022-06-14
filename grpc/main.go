@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/fercevik729/STLKER/eagle/data"
-	pb "github.com/fercevik729/STLKER/eagle/protos"
-	server "github.com/fercevik729/STLKER/eagle/server"
+	"github.com/fercevik729/STLKER/grpc/data"
+	pb "github.com/fercevik729/STLKER/grpc/protos"
+	server "github.com/fercevik729/STLKER/grpc/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

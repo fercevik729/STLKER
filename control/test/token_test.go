@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fercevik729/STLKER/octopus/data"
-	"github.com/fercevik729/STLKER/octopus/handlers"
+	"github.com/fercevik729/STLKER/control/data"
+	"github.com/fercevik729/STLKER/control/handlers"
 )
 
 func TestSignUp(t *testing.T) {

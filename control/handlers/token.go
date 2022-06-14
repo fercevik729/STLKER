@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/fercevik729/STLKER/octopus/data"
+	"github.com/fercevik729/STLKER/control/data"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
