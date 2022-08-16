@@ -26,3 +26,11 @@ and sends back the result to the user in a similar manner.
 * /logout
 * /refresh
 * /deleteuser (Requires authentication)
+
+## Disclaimer
+This program is not intended to provide real-time stock information as it utilizes free publicly available API's by Alpha Vantage
+
+## License
+© Furkan T. Ercevik
+
+This repository is licensed with a [GNU GPLv3](LICENSE) license.
