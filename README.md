@@ -8,13 +8,12 @@ and sends back the result to the user in a similar manner.
 ## Current Features
 * Utilizes a unary gRPC microservice as well as a RESTful one
 * JWT authentication and cookies
-* Extensive use of GORM
+* Extensive use of GORM to communicate with a sqlite database
 * Redis Caching
 * Test cases
 
 ## Future Features
 * Front-end web application
-* 
 
 ## Current endpoints
 * /portfolios (Requires authentication)
