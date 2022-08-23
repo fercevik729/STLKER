@@ -1,14 +1,36 @@
 package handlers_test
 
-/*
+import (
+	"bytes"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/fercevik729/STLKER/control/handlers"
+	"github.com/fercevik729/STLKER/grpc/protos"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
 // TODO: Update tests to utilize cookies
 func TestCreatePortfolio(t *testing.T) {
+
+	// Login the user
+	s, err := loginMockUser()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("Your token is: ", s)
 	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "T","Bought Price":12.50,"Shares":50},{"Ticker":"TSLA","Bought Price":120.21,"Shares":25},{"Ticker": "AMC","Bought Price":5.07,"Shares":1000}]}}`)
 	req, err := http.NewRequest("POST", "/portfolio", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		t.Error("couldn't create post request to create a new portfolio:", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	// TODO: Add the token as a cookie
+	//req.AddCookie()
 
 	// Create http recorder
 	rr := httptest.NewRecorder()

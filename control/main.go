@@ -113,9 +113,9 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
-	// Add cache middleware to getRouter
-	getR.Use(handlers.Authenticate, control.Cache)
+	getR.Use(handlers.Authenticate)
 
+	// Add cache middleware to stockRouter
 	stockR := sm.Methods(http.MethodGet).Subrouter()
 	stockR.HandleFunc("/stocks/more/{ticker}", control.MoreInfo).Methods("GET")
 	stockR.HandleFunc("/stocks/{ticker:[A-Z]+}/{currency}", control.GetInfo).Methods("GET")
