@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +16,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// TODO: Update tests to utilize cookies
 func TestCreatePortfolio(t *testing.T) {
 	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "T","Bought Price":12.50,"Shares":50},{"Ticker":"TSLA","Bought Price":120.21,"Shares":25},{"Ticker": "AMC","Bought Price":5.07,"Shares":1000}]}}`)
 	req, err := http.NewRequest("POST", "/portfolio", bytes.NewBuffer(jsonStr))
 	if err != nil {
-		t.Error("couldn't create post request to create a new portfolio:", err)
+		t.Error("couldn't create POST request for TestCreatePortfolio")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	// Login and set the token and username
@@ -56,9 +56,9 @@ func TestCreatePortfolio(t *testing.T) {
 
 func TestGetPortfolio(t *testing.T) {
 	expectedStr := `{"Portfolio Name":"CollegeFund","Original Value":8700.25,"Current Value":33110,"Net Gain":24409.75,"Net Change":"280.56%","Securities":[{"Ticker":"T","Bought Price":12.5,"Current Price":18.13,"Shares":50,"Gain":281.5,"Percent Change":"45.04%","Currency":"USD"},{"Ticker":"TSLA","Bought Price":120.21,"Current Price":869.74,"Shares":25,"Gain":18738.25,"Percent Change":"623.52%","Currency":"USD"},{"Ticker":"AMC","Bought Price":5.07,"Current Price":10.46,"Shares":1000,"Gain":5390,"Percent Change":"106.31%","Currency":"USD"}]}`
-	req, err := http.NewRequest("GET", "/portfolio/CollegeFund", nil)
+	req, err := http.NewRequest("GET", "/portfolio", nil)
 	if err != nil {
-		t.Error("couldn't create get request for CollegeFund")
+		t.Error("couldn't create GET request for TestGetPortfolio")
 	}
 	// Set mux URL variables
 	vars := map[string]string{
@@ -90,6 +90,7 @@ func TestGetPortfolio(t *testing.T) {
 	}
 
 	// Check response message
+	fmt.Println(rr.Body.String())
 	if !strings.Contains(rr.Body.String(), string(expectedStr)) {
 		t.Errorf("expected %v got %v", expectedStr, rr.Body.String())
 	}
@@ -98,9 +99,9 @@ func TestGetPortfolio(t *testing.T) {
 func TestUpdatePortfolio(t *testing.T) {
 	// Create request and json body
 	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "V","Bought Price":12.50,"Shares":50},{"Ticker":"GME","Bought Price":120.21,"Shares":25},{"Ticker": "ZM","Bought Price":5.07,"Shares":1000}]}}`)
-	req, err := http.NewRequest("PUT", "/portfolio/CollegeFund", bytes.NewBuffer(jsonStr))
+	req, err := http.NewRequest("PUT", "/portfolio", bytes.NewBuffer(jsonStr))
 	if err != nil {
-		t.Error("couldn't create put request for portfolio College Fund")
+		t.Error("couldn't create PUT request for TestUpdatePortfolio")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	vars := map[string]string{
@@ -141,9 +142,9 @@ func TestUpdatePortfolio(t *testing.T) {
 
 func TestDeletePortfolio(t *testing.T) {
 	expectedStr := `{"Message":"Deleted portfolio CollegeFund"}`
-	req, err := http.NewRequest("DELETE", "/portfolio/CollegeFund", nil)
+	req, err := http.NewRequest("DELETE", "/portfolio", nil)
 	if err != nil {
-		t.Error("couldn't create delete request:", err)
+		t.Error("couldn't create DELETE request for TestDeletePortfolio")
 	}
 	// Set mux URL variables
 	vars := map[string]string{

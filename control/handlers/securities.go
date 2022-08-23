@@ -78,6 +78,10 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 		PortfolioID: uint(portId),
 	}
 	db.Debug().Create(&newSecurity)
+	w.WriteHeader(http.StatusCreated)
+	data.ToJSON(&ResponseMessage{
+		Msg: fmt.Sprintf("Created %s security with %.2f shares for portfolio %s", ticker, shares, portName),
+	}, w)
 }
 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
@@ -99,13 +103,6 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Update the security
 	c.updateSecurities(&security)
 
-	// Set the cache
-	if c.cache != nil {
-		err = c.setCache(r, &security)
-	}
-	if err != nil {
-		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
-	}
 	// Write to responsewriter
 	data.ToJSON(&security, w)
 }
@@ -137,7 +134,7 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 	// Update the portfolio
 	db.Model(&Security{}).Where("portfolio_id=?", portId).Where("ticker=?", sd.Ticker).Update("shares", sd.Shares)
-	data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Updated security of ticker %s", sd.Ticker)},
+	data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Updated security with ticker %s", sd.Ticker)},
 		w,
 	)
 
