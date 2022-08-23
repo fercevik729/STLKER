@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -46,8 +47,8 @@ func getMockStock(ticker, currency string) (*data.Stock, int, error) {
 
 }
 
-// Logins in a mock user and returns the JWT token as a string
-func loginMockUser() (string, error) {
+// Logins in a mock user and returns the request with the token as a http cookie
+func loginMockUser(r *http.Request) (*http.Request, error) {
 
 	// Get token from /login endroute
 	// Create request
@@ -63,7 +64,7 @@ func loginMockUser() (string, error) {
 
 	req, err := http.NewRequest("POST", "/login", &buf)
 	if err != nil {
-		return "", fmt.Errorf("couldn't create post request to create a new portfolio: %s", err)
+		return nil, fmt.Errorf("couldn't create post request to create a new portfolio: %s", err)
 	}
 	req.Header.Set("Content-Type", contentType)
 
@@ -73,8 +74,16 @@ func loginMockUser() (string, error) {
 	handler := http.HandlerFunc(control.LogIn)
 	handler.ServeHTTP(rr, req)
 
+	// Set the cookie and username
 	var res map[string]string
 	err = data.FromJSON(&res, rr.Body)
-	// Return token as string
-	return res["Access-Token"], err
+	cookie := &http.Cookie{
+		Name:  "token",
+		Value: res["Access-Token"],
+	}
+	var u handlers.Username
+	r = r.WithContext(context.WithValue(r.Context(), u, mockUser))
+	r.AddCookie(cookie)
+	return r, err
+
 }
