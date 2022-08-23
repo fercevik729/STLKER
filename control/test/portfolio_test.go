@@ -1,6 +1,20 @@
 package handlers_test
 
-/*
+import (
+	"bytes"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/fercevik729/STLKER/control/handlers"
+	"github.com/fercevik729/STLKER/grpc/protos"
+	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
 // TODO: Update tests to utilize cookies
 func TestCreatePortfolio(t *testing.T) {
 	jsonStr := []byte(`{"Name": "CollegeFund","Securities":[{"Ticker": "T","Bought Price":12.50,"Shares":50},{"Ticker":"TSLA","Bought Price":120.21,"Shares":25},{"Ticker": "AMC","Bought Price":5.07,"Shares":1000}]}}`)
@@ -9,7 +23,11 @@ func TestCreatePortfolio(t *testing.T) {
 		t.Error("couldn't create post request to create a new portfolio:", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-
+	// Login and set the token and username
+	req, err = loginMockUser(req)
+	if err != nil {
+		t.Error(err)
+	}
 	// Create http recorder
 	rr := httptest.NewRecorder()
 	// Dial gRPC server
@@ -29,16 +47,15 @@ func TestCreatePortfolio(t *testing.T) {
 	}
 
 	// Check response message
-	expected := `{"Message":"Created portfolio named CollegeFund"}`
+	expected := `{"Message":"Created portfolio named CollegeFund for wolfofwallstreet"}`
 	if !strings.Contains(rr.Body.String(), expected) {
 		t.Errorf("expected %v got %v", expected, rr.Body.String())
 	}
 
 }
 
-/*
 func TestGetPortfolio(t *testing.T) {
-	expectedStr := `{"Original Value":`
+	expectedStr := `{"Portfolio Name":"CollegeFund","Original Value":8700.25,"Current Value":33110,"Net Gain":24409.75,"Net Change":"280.56%","Securities":[{"Ticker":"T","Bought Price":12.5,"Current Price":18.13,"Shares":50,"Gain":281.5,"Percent Change":"45.04%","Currency":"USD"},{"Ticker":"TSLA","Bought Price":120.21,"Current Price":869.74,"Shares":25,"Gain":18738.25,"Percent Change":"623.52%","Currency":"USD"},{"Ticker":"AMC","Bought Price":5.07,"Current Price":10.46,"Shares":1000,"Gain":5390,"Percent Change":"106.31%","Currency":"USD"}]}`
 	req, err := http.NewRequest("GET", "/portfolio/CollegeFund", nil)
 	if err != nil {
 		t.Error("couldn't create get request for CollegeFund")
@@ -49,6 +66,11 @@ func TestGetPortfolio(t *testing.T) {
 	}
 	req = mux.SetURLVars(req, vars)
 
+	// login and set the token and username
+	req, err = loginMockUser(req)
+	if err != nil {
+		t.Error(err)
+	}
 	// Create http recorder
 	rr := httptest.NewRecorder()
 	// Dial gRPC server
@@ -85,6 +107,11 @@ func TestUpdatePortfolio(t *testing.T) {
 		"name": "CollegeFund",
 	}
 	req = mux.SetURLVars(req, vars)
+	// login and set the token and username
+	req, err = loginMockUser(req)
+	if err != nil {
+		t.Error(err)
+	}
 	// Create http recorder
 	rr := httptest.NewRecorder()
 	// Dial gRPC server
@@ -95,7 +122,7 @@ func TestUpdatePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.UpdatePortfolio)
 	handler.ServeHTTP(rr, req)
 	// Check status
@@ -123,6 +150,11 @@ func TestDeletePortfolio(t *testing.T) {
 		"name": "CollegeFund",
 	}
 	req = mux.SetURLVars(req, vars)
+	// Set token and username
+	req, err = loginMockUser(req)
+	if err != nil {
+		t.Fail()
+	}
 
 	// Create http recorder
 	rr := httptest.NewRecorder()
@@ -134,7 +166,7 @@ func TestDeletePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil)
+	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.DeletePortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -147,6 +179,3 @@ func TestDeletePortfolio(t *testing.T) {
 		t.Errorf("expected %v got %v", expectedStr, rr.Body.String())
 	}
 }
-
-*/
-// TODO: add more tests for update portfolio and crud operations for securities

@@ -49,7 +49,7 @@ func init() {
 }
 
 func main() {
-	l := log.New(os.Stdout, "octopus", log.LstdFlags)
+	l := log.New(os.Stdout, "control", log.LstdFlags)
 
 	// Dial gRPC server
 	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -80,7 +80,7 @@ func main() {
 		WriteTimeout: 120 * time.Second,
 	}
 	go func() {
-		l.Println("[DEBUG] Starting octopus on port 8080")
+		l.Println("[DEBUG] Starting control on port 8080")
 
 		err := s.ListenAndServe()
 		if err != nil {
@@ -113,9 +113,9 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
-	// Add cache middleware to getRouter
-	getR.Use(handlers.Authenticate, control.Cache)
+	getR.Use(handlers.Authenticate)
 
+	// Add cache middleware to stockRouter
 	stockR := sm.Methods(http.MethodGet).Subrouter()
 	stockR.HandleFunc("/stocks/more/{ticker}", control.MoreInfo).Methods("GET")
 	stockR.HandleFunc("/stocks/{ticker:[A-Z]+}/{currency}", control.GetInfo).Methods("GET")
