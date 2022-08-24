@@ -57,10 +57,7 @@ func loginMockUser(r *http.Request) (*http.Request, error) {
 		Password: mockPass,
 	}
 	var buf bytes.Buffer
-	err := data.ToJSON(mockBody, &buf)
-	if err != nil {
-		log.Fatal(err)
-	}
+	data.ToJSON(mockBody, &buf)
 
 	req, err := http.NewRequest("POST", "/login", &buf)
 	if err != nil {
