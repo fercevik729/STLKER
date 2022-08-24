@@ -37,15 +37,7 @@ func (s *Security) setMoves(gain float64, change string) {
 	s.Change = change
 }
 
-func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
-	// Get URI vars
-	portName := mux.Vars(r)["name"]
-	username := retrieveUsername(r)
-
-	// Get ticker and shares info from JSON body
-	var params securityData
-	data.FromJSON(&params, r.Body)
-
+func (c *ControlHandler) newSecurity(params securityData, w http.ResponseWriter, portName string, username string) {
 	ticker := params.Ticker
 	shares := params.Shares
 
@@ -82,6 +74,18 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 	data.ToJSON(&ResponseMessage{
 		Msg: fmt.Sprintf("Created %s security with %.2f shares for portfolio %s", ticker, shares, portName),
 	}, w)
+}
+
+func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
+	// Get URI vars
+	portName := mux.Vars(r)["name"]
+	username := retrieveUsername(r)
+
+	// Get ticker and shares info from JSON body
+	var params securityData
+	data.FromJSON(&params, r.Body)
+
+	c.newSecurity(params, w, portName, username)
 }
 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
@@ -133,10 +137,16 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// Update the portfolio
-	db.Model(&Security{}).Where("portfolio_id=?", portId).Where("ticker=?", sd.Ticker).Update("shares", sd.Shares)
-	data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Updated security with ticker %s", sd.Ticker)},
-		w,
-	)
+	// Create the new security if a security with that ticker doesn't already exist
+	var res Security
+	db.Model(&res).Where("portfolio_id=?", portId).Where("ticker=?", sd.Ticker).Update("shares", sd.Shares)
+	if res.Ticker == "" {
+		c.newSecurity(sd, w, portName, username)
+	} else {
+		data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Updated security with ticker %s", sd.Ticker)},
+			w,
+		)
+	}
 
 }
 
