@@ -2,13 +2,22 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
 	pb "github.com/fercevik729/STLKER/grpc/protos"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+func init() {
+	err := godotenv.Load("../vars.env")
+	if err != nil {
+		panic(errors.New("couldn't load variables from ../vars.env"))
+	}
+}
 
 func main() {
 

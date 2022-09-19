@@ -3,6 +3,7 @@ package data
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -29,10 +30,9 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 		sp.l.Println("[WARNING] Markets are closed")
 	}
 	// Load the api key
-	keyfile := "../key.txt"
-	key, err := LoadKey(keyfile)
-	if err != nil {
-		sp.l.Println("[ERROR] Couldn't open key file at", keyfile)
+	key := os.Getenv("API_KEY")
+	if key == "" {
+		sp.l.Println("[ERROR] Couldn't retrieve API KEY")
 	}
 	// Get the new stock price from Alpha Vantage
 	url := "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + ticker + "&apikey=" + key
@@ -65,10 +65,9 @@ func (sp *StockPrices) MoreInfo(ticker string) *MoreStock {
 		sp.l.Println("[WARNING] Markets are closed")
 	}
 	// Load the api key
-	keyfile := "../key.txt"
-	key, err := LoadKey(keyfile)
-	if err != nil {
-		sp.l.Println("[ERROR] Couldn't open key file at", keyfile)
+	key := os.Getenv("API_KEY")
+	if key == "" {
+		sp.l.Println("[ERROR] Couldn't retrieve API_KEY")
 	}
 	// Get the company overview from Alpha Vantage
 	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + ticker + "&apikey=" + key

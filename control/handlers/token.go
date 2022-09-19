@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 
@@ -29,7 +30,7 @@ type Claims struct {
 
 // Initialize the encryptkey
 func init() {
-	encryptKey = ReadEnvVar("KEY")
+	encryptKey = os.Getenv("KEY")
 	if encryptKey == "" {
 		panic(errors.New("couldn't retrieve KEY env variable"))
 	}
