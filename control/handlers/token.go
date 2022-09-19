@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var encryptKey string
+var encryptKey string = os.Getenv("KEY")
 
 type User struct {
 	gorm.Model
@@ -26,14 +25,6 @@ type Claims struct {
 	Name  string `json:"Name"`
 	Admin bool   `json:"Admin"`
 	jwt.StandardClaims
-}
-
-// Initialize the encryptkey
-func init() {
-	encryptKey = os.Getenv("KEY")
-	if encryptKey == "" {
-		panic(errors.New("couldn't retrieve KEY env variable"))
-	}
 }
 
 // SignUp handles requests to /signup and adds new users to the db
