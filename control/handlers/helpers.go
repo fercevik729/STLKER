@@ -4,24 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/go-redis/cache/v8"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 )
 
 // ReadEnvVar reads an environmental variable specified by key after loading vars.env
-func ReadEnvVar(key string) string {
-	err := godotenv.Load("vars.env")
-	if err != nil {
-		return ""
-	}
-	return os.Getenv(key)
-}
 
 func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
 	ctx := context.Background()

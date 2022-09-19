@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net"
 	"os"
@@ -8,13 +9,20 @@ import (
 	"github.com/fercevik729/STLKER/grpc/data"
 	pb "github.com/fercevik729/STLKER/grpc/protos"
 	server "github.com/fercevik729/STLKER/grpc/server"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
+func init() {
+	err := godotenv.Load("../vars.env")
+	if err != nil {
+		panic(errors.New("couldn't load variables from ../vars.env"))
+	}
+}
+
 func main() {
 	l := log.New(os.Stdout, "grpc", log.LstdFlags)
-
 	// Create tcp socket for incoming connections
 	lis, err := net.Listen("tcp", "0.0.0.0:9090")
 	if err != nil {

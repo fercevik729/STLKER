@@ -15,6 +15,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"gorm.io/driver/sqlite"
@@ -26,8 +27,13 @@ var dbName string
 
 // TODO: create swagger documentation
 func init() {
+	// Load environmental variables
+	err := godotenv.Load("../vars.env")
+	if err != nil {
+		panic(errors.New("couldn't load environmental variables from ../vars.env"))
+	}
 	// Get database name
-	dbName = handlers.ReadEnvVar("DB_NAME")
+	dbName = os.Getenv("DB_NAME")
 	if dbName == "" {
 		panic(errors.New("couldn't retrieve DB_NAME"))
 	}
@@ -67,12 +73,12 @@ func main() {
 	// Register routes
 	registerRoutes(sm, control)
 
-	// CORS for UI
-	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"https://localhost:3000"}))
+	// CORS for UI (maybe)
+	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"*"}))
 
 	// Create server
 	s := &http.Server{
-		Addr:         ":8080",
+		Addr:         "localhost:8080",
 		Handler:      ch(sm),
 		ErrorLog:     l,
 		IdleTimeout:  5 * time.Second,
@@ -128,7 +134,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 
 	// Authentication routes
 	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
-	sm.HandleFunc("/login", control.LogIn).Methods("POST")
+	sm.HandleFunc("/login", control.LogIn).Methods("POST", "OPTIONS")
 	sm.HandleFunc("/logout", control.LogOut).Methods("GET")
 	sm.HandleFunc("/refresh", control.Refresh).Methods("GET")
 
