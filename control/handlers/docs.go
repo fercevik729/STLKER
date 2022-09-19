@@ -66,7 +66,7 @@ type messageResponseWrapper struct {
 // swagger:response noContent
 type noContentWrapper struct{}
 
-// swagger:parameters getPortfolio createSecurity updateSecurity deleteSecurity
+// swagger:parameters getPortfolio createSecurity updateSecurity deletePortfolio
 type portfolioNameParamWrapper struct {
 	// Name of the portfolio
 	// in: path

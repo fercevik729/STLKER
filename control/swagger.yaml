@@ -63,6 +63,13 @@ paths:
         delete:
             description: Deletes a given portfolio for a user
             operationId: deletePortfolio
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
             responses:
                 "200":
                     $ref: '#/responses/messageResponse'
