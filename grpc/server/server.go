@@ -18,6 +18,7 @@ type WatcherServer struct {
 	stockPrices       *data.StockPrices
 	l                 *log.Logger
 	subscribedTickers map[pb.Watcher_SubscribeTickerServer][]*pb.TickerRequest
+	exchangeRates     map[string]float64
 }
 
 func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
@@ -25,6 +26,7 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
 		stockPrices:       sp,
 		l:                 l,
 		subscribedTickers: make(map[pb.Watcher_SubscribeTickerServer][]*pb.TickerRequest),
+		exchangeRates:     make(map[string]float64),
 	}
 	go w.handleUpdates()
 	return w
@@ -33,25 +35,29 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
 // GetInfo returns a TickerResponse containing the price of the security in USD
 func (w *WatcherServer) GetInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.TickerResponse, error) {
 	s := w.stockPrices.GetInfo(tr.Ticker)
-	oldPrice, err := strconv.ParseFloat(s.Price, 64)
+	// Parse old
+	oldOpen, _ := strconv.ParseFloat(s.Open, 64)
+	oldHigh, _ := strconv.ParseFloat(s.High, 64)
+	oldLow, _ := strconv.ParseFloat(s.Low, 64)
+	oldPrice, _ := strconv.ParseFloat(s.Price, 64)
+	oldPrev, err := strconv.ParseFloat(s.PrevClose, 64)
 	if err != nil {
 		return nil, err
 	}
-	newPrice, err := convert(oldPrice, tr.Destination.String())
+	rate, err := w.getRate(tr.Destination.String())
 	if err != nil {
 		return nil, err
 	}
-	s.Price = fmt.Sprintf("%.2f", newPrice)
 	return &pb.TickerResponse{
 		Symbol:        s.Symbol,
-		Open:          s.Open,
-		High:          s.High,
-		Low:           s.Low,
-		Price:         s.Price,
+		Open:          fmt.Sprintf("%.2f", oldOpen*rate),
+		High:          fmt.Sprintf("%.2f", oldHigh*rate),
+		Low:           fmt.Sprintf("%.2f", oldLow*rate),
+		Price:         fmt.Sprintf("%.2f", oldPrice*rate),
 		Destination:   tr.Destination.String(),
 		Volume:        s.Volume,
 		LTD:           s.LTD,
-		PrevClose:     s.PrevClose,
+		PrevClose:     fmt.Sprintf("%.2f", oldPrev*rate),
 		PercentChange: s.PercentChange,
 	}, nil
 }
@@ -62,7 +68,7 @@ func (w *WatcherServer) handleUpdates() {
 
 	// waits 15 seconds
 	go func() {
-		ticker := time.NewTicker(15 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 		for range ticker.C {
 			ru <- struct{}{}
 		}
@@ -80,7 +86,7 @@ func (w *WatcherServer) handleUpdates() {
 				}
 				err = k.Send(resp)
 				if err != nil {
-					w.l.Println("[ERROR] Couldn't send the updated rate")
+					w.l.Println("[ERROR] Couldn't send the updated stock information")
 				}
 			}
 		}
@@ -138,28 +144,24 @@ func (w *WatcherServer) Echo(ctx context.Context, tr *pb.TickerRequest) (*pb.Tic
 	return tr, nil
 }
 
-// ExchangeRates is a struct composed of ExchangeRate
-// It is used to unmarshal FOREX JSON data from the Alpha Vantage API
-type ExchangeRates struct {
-	R ExchangeRate `json:"Realtime Currency Exchange Rate"`
-}
 type ExchangeRate struct {
-	Rate string `json:"5. Exchange Rate"`
+	Rate float64 `json:"result"`
 }
 
-// convert calls the AV's FOREX endpoint and converts the original stock price as needed
-func convert(original float64, dest string) (float64, error) {
+// convert calls the exchangerate API and returns the rate to the caller
+func (w *WatcherServer) getRate(dest string) (float64, error) {
 	// If a destination currency is USD simply return the original stock price, which was already in USD
 	if dest == "USD" {
-		return original, nil
+		return 1, nil
 	}
-	// Load the API key
-	key, err := data.LoadKey("../key.txt")
-	if err != nil {
-		return -1, err
+
+	// Cache the exchange rates
+	rate, ok := w.exchangeRates[dest]
+	if ok {
+		return rate, nil
 	}
-	// Send a request to the Alpha Vantage API
-	resp, err := http.Get("https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=" + dest + "&apikey=" + key)
+	// Send a request to the Exchange Rate API
+	resp, err := http.Get("https://api.exchangerate.host/convert?from=USD&to=" + dest)
 	if err != nil {
 		return -1, err
 	}
@@ -168,24 +170,14 @@ func convert(original float64, dest string) (float64, error) {
 		return -1, fmt.Errorf("expected status code 200, got %d", resp.StatusCode)
 	}
 	// Convert the JSON body to a ExchangeRate struct
-	er := &ExchangeRates{}
+	er := &ExchangeRate{}
 	err = data.FromJSON(er, resp.Body)
 	if err != nil {
 		return -1, err
 	}
 
-	// Convert the rate to a float
-	newRate, err := strconv.ParseFloat(er.R.Rate, 64)
-	if err != nil {
-		return -1, err
-	}
-	// Return the stock price in the destination currency
-	newPrice := newRate * original
+	w.exchangeRates[dest] = er.Rate
+	// Return the exchange rate
+	return er.Rate, nil
 
-	// Round the price to 2 decimal places
-	roundedPrice, err := strconv.ParseFloat(fmt.Sprintf("%.2f", newPrice), 64)
-	if err != nil {
-		return newPrice, err
-	}
-	return roundedPrice, nil
 }
