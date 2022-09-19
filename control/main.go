@@ -12,6 +12,7 @@ import (
 
 	"github.com/fercevik729/STLKER/control/handlers"
 	p "github.com/fercevik729/STLKER/grpc/protos"
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-redis/redis/v8"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -72,7 +73,6 @@ func main() {
 	control := handlers.NewControlHandler(l, wc, ring, dbName)
 	// Register routes
 	registerRoutes(sm, control)
-
 	// CORS for UI (maybe)
 	ch := goHandlers.CORS(goHandlers.AllowedOrigins([]string{"*"}))
 
@@ -120,6 +120,13 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	getR.HandleFunc("/portfolios", control.GetAll)
 	getR.HandleFunc("/portfolios/{name}/{ticker:[A-Z]+}", control.ReadSecurity)
 	getR.Use(handlers.Authenticate)
+
+	// Swagger UI
+	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.Redoc(opts, nil)
+
+	getR.Handle("/docs", sh)
+	// getR.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// Add cache middleware to stockRouter
 	stockR := sm.Methods(http.MethodGet).Subrouter()

@@ -16,7 +16,7 @@ package handlers
 
 import "github.com/fercevik729/STLKER/grpc/data"
 
-// A portfoliosResponse is a list of portfolio structs returned to the client
+// A portfoliosResponse is a list of portfolios returned to the client
 // swagger:response portfoliosResponse
 type portfoliosResponseWrapper struct {
 	// All portfolios for a user

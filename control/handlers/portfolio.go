@@ -32,14 +32,30 @@ type STLKERModel struct {
 	DeletedAt sql.NullTime `json:"-" gorm:"index"`
 }
 
-// A Portfolio is a GORM model that is intended to mirror the structure
-// of a simple portfolio
+// swagger: parameters createPortfolio updatePortfolio
+type ReqPortfolio struct {
+	// A single portfolio
+	// in: body
+	Body Portfolio
+}
+
+// A Portfolio defines the structure for an API portfolio
+// swagger:model
 type Portfolio struct {
+	// swagger: ignore
 	STLKERModel
-	// Name is the name of the portfolio
-	Name     string `json:"Name"`
+	// the name of the portfolio
+	//
+	// required: true
+	Name string `json:"Name"`
+	// username of the portfolio's owner
+	//
+	// required: true
+	// example: MoneyLover123
 	Username string `json:"Username"`
-	// Stocks is a slice of Security structs
+	// Stocks is a list of Security structures
+	//
+	// required: true
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 

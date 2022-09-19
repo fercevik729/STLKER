@@ -10,9 +10,29 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// swagger: parameters createSecurity updateSecurity
+type ReqSecurity struct {
+	// ticker of the security
+	//
+	// required: true
+	Ticker string `json:"Ticker"`
+	// number of shares of the security
+	//
+	// required: true
+	Shares float64 `json:"Shares"`
+}
+
+// Product defines the structure for an API product
+// swagger:model
 type Security struct {
+	// swagger: ignore
 	STLKERModel
-	SecurityID  int     `gorm:"primary_key" json:"-"`
+	// swagger: ignore
+	SecurityID int `gorm:"primary_key" json:"-"`
+	// ticker of the security
+	//
+	// required: true
+	// example: MSFT
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
@@ -22,6 +42,7 @@ type Security struct {
 	// Currency is the destination currency of the stock
 	Currency string `json:"Currency" gorm:"default:USD"`
 	// Foreign key
+	// swagger: ignore
 	PortfolioID uint `json:"-"`
 }
 
