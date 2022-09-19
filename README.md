@@ -27,6 +27,25 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 * /refresh
 * /deleteuser (Requires authentication)
 
+## Utilizing [`grpcurl`](https://github.com/fullstorydev/grpcurl)
+To send a request directly to the unary rpc's, one needs to do the following:
+```shell
+  grpcurl --plaintext -msg-template -d '{"Ticker": "MSFT", "Destination":"USD"}' localhost:9090 Watcher/GetInfo
+```
+or
+```shell
+    grpcurl --plaintext -msg-template -d '{"Ticker": "MSFT", "Destination":"USD"}' localhost:9090 Watcher/MoreInfo
+```
+To send a request to the bidirectional rpc, one needs to do the following:
+```shell
+  grpcurl --plaintext -msg-template -d @ localhost:9090 Watcher/SubscribeTicker
+```
+This will create a connection that stays alive by which you can send many requests in the form of
+```shell
+  {"Ticker": "MSFT", "Destination": "EUR"}
+```
+and also be periodically updated with new stock price data. To terminate this connection a simple CTRL-C is sufficient.
+
 ## Disclaimer
 This program is not intended to provide real-time stock information as it utilizes free publicly available API's by Alpha Vantage which provides information that is slightly delayed.
 
