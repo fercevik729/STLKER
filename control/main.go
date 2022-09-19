@@ -125,8 +125,9 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
 	sh := middleware.Redoc(opts, nil)
 
-	getR.Handle("/docs", sh)
-	// getR.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+	docsR := sm.Methods(http.MethodGet).Subrouter()
+	docsR.Handle("/docs", sh)
+	docsR.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// Add cache middleware to stockRouter
 	stockR := sm.Methods(http.MethodGet).Subrouter()
