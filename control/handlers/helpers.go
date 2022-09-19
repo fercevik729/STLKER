@@ -12,23 +12,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// ReadEnvVar reads an environmental variable specified by key after loading vars.env
-
-func (c *ControlHandler) setCache(r *http.Request, value interface{}) error {
-	ctx := context.Background()
-	key := retrieveUsername(r) + r.RequestURI
-
-	if err := c.cache.Set(&cache.Item{
-		Ctx:   ctx,
-		Key:   key,
-		Value: value,
-		TTL:   15 * time.Minute,
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *ControlHandler) setStockCache(r *http.Request, value interface{}) error {
 	ctx := context.Background()
 	key := r.RequestURI

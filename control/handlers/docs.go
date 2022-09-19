@@ -14,22 +14,20 @@
 // swagger:meta
 package handlers
 
-import "github.com/fercevik729/STLKER/grpc/data"
-
-// A portfoliosResponse is a list of portfolios returned to the client
-// swagger:response portfoliosResponse
-type portfoliosResponseWrapper struct {
-	// All portfolios for a user
+// A profits is a list of profits for each of the portfolios returned to the client
+// swagger:response profitsResponse
+type profitsResponseWrapper struct {
+	// Profits for all portfolios for a user
 	// in: body
-	Body []Portfolio
+	Body []Profits
 }
 
 // A portfolioResponse is a single portfolio returned to the client
 // swagger:response portfolioResponse
-type portfolioResponseWrapper struct {
-	// A single portfolio
+type profitResponseWrapper struct {
+	// A single portfolio's profits
 	// in: body
-	Body Portfolio
+	Body Profits
 }
 
 // A securityResponse is a single security's information returned to the client
@@ -41,10 +39,27 @@ type securityResponseWrapper struct {
 }
 
 // A stockResponse is information about a single stock returned to the client
+// swagger:response stockResponse
 type stockResponseWrapper struct {
 	// A single stock
 	// in: body
-	Body data.Stock
+	Body Stock
+}
+
+// A moreStockResponse is more information about a single stock
+// swagger:response moreStockResponse
+type moreStockResponseWrapper struct {
+	// A single stock
+	// in: body
+	Body MoreStock
+}
+
+// A messageResponse is diagnostic information returned to the client
+// swagger:response messageResponse
+type messageResponseWrapper struct {
+	// A message
+	// in: body
+	Body ResponseMessage
 }
 
 // noContent is used to signify no content is returned to the sdk
@@ -76,6 +91,7 @@ type tickerParamWrapper struct {
 	Ticker string `json:"ticker"`
 }
 
+// swagger:parameters getInfo
 type tickerCurrencyParamWrapper struct {
 	// Ticker of the security
 	// in: path
