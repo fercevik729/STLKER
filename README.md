@@ -1,5 +1,5 @@
 # STLKER
-A stock tracking that utilizes RESTful and gRPC microservices
+A stock tracking application that utilizes RESTful and gRPC microservices and other key components of backend programming.
 
 ## How it works?
 The user sends a HTTP request to the control API's endpoint which then forwards it to the unary gRPC API. The gRPC API then sends a request to a third-party API, Alpha Vantage, and sends back the result to the user in a similar manner. If the user so wishes, they can interact with the gRPC service directly and call the unary functions as well as the ones that utilize bidirectional streaming, with the help of `grpcurl`.
