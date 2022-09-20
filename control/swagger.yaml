@@ -38,6 +38,12 @@ paths:
         post:
             description: Creates a new portfolio for a user
             operationId: createPortfolio
+            parameters:
+            - description: A portfolio
+              in: body
+              name: Body
+              schema:
+                $ref: '#/definitions/Portfolio'
             responses:
                 "200":
                     $ref: '#/responses/messageResponse'
@@ -50,6 +56,12 @@ paths:
         put:
             description: Updates a given portfolio
             operationId: updatePortfolio
+            parameters:
+            - description: A portfolio
+              in: body
+              name: Body
+              schema:
+                $ref: '#/definitions/Portfolio'
             responses:
                 "200":
                     $ref: '#/responses/messageResponse'
@@ -199,8 +211,9 @@ paths:
                   type: string
                   x-go-name: Ticker
                 - description: Destination currency for the security's unit prices
-                  in: query
+                  in: path
                   name: currency
+                  required: true
                   type: string
                   x-go-name: Currency
             responses:
@@ -241,19 +254,26 @@ responses:
         description: A messageResponse is diagnostic information returned to the client
     moreStockResponse:
         description: A moreStockResponse is more information about a single stock
-    noContent:
-        description: noContent is used to signify no content is returned to the sdk
-    portfolioResponse:
-        description: A portfolioResponse is a single portfolio returned to the client
+        schema:
+          $ref: '#/definitions/MoreStock'
+    profitResponse:
+        description: A profitResponse is a single portfolio returned to the client
+        schema:
+          $ref: '#/definitions/Profits'
     profitsResponse:
         description: A profits is a list of profits for each of the portfolios returned to the client
         schema:
-            items: {}
-            type: array
+          items:
+            $ref: '#/definitions/Profits'
+          type: array
     securityResponse:
         description: A securityResponse is a single security's information returned to the client
+        schema:
+          $ref: '#/definitions/Security'
     stockResponse:
         description: A stockResponse is information about a single stock returned to the client
+        schema:
+          $ref: '#/definitions/Stock'
 schemes:
     - http
 swagger: "2.0"

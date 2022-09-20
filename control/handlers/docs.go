@@ -22,8 +22,8 @@ type profitsResponseWrapper struct {
 	Body []Profits
 }
 
-// A portfolioResponse is a single portfolio returned to the client
-// swagger:response portfolioResponse
+// A profitResponse is a single portfolio returned to the client
+// swagger:response profitResponse
 type profitResponseWrapper struct {
 	// A single portfolio's profits
 	// in: body
@@ -62,10 +62,6 @@ type messageResponseWrapper struct {
 	Body ResponseMessage
 }
 
-// noContent is used to signify no content is returned to the sdk
-// swagger:response noContent
-type noContentWrapper struct{}
-
 // swagger:parameters getPortfolio createSecurity updateSecurity deletePortfolio
 type portfolioNameParamWrapper struct {
 	// Name of the portfolio
@@ -97,6 +93,7 @@ type tickerCurrencyParamWrapper struct {
 	// in: path
 	Ticker string `json:"ticker"`
 	// Destination currency for the security's unit prices
+	// in: path
 	Currency string `json:"currency"`
 }
 

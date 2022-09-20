@@ -118,7 +118,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	getR := sm.Methods(http.MethodGet).Subrouter()
 	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)
-	getR.HandleFunc("/portfolios/{name}/{ticker:[A-Z]+}", control.ReadSecurity)
+	getR.HandleFunc("/portfolios/{name}/{ticker}", control.ReadSecurity)
 	getR.Use(handlers.Authenticate)
 
 	// Swagger UI
@@ -132,7 +132,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Add cache middleware to stockRouter
 	stockR := sm.Methods(http.MethodGet).Subrouter()
 	stockR.HandleFunc("/stocks/more/{ticker:[A-Z]+}", control.MoreInfo).Methods("GET")
-	stockR.HandleFunc("/stocks/{ticker:[A-Z]+}/{currency}", control.GetInfo).Methods("GET")
+	stockR.HandleFunc("/stocks/{ticker}/{currency}", control.GetInfo).Methods("GET")
 	stockR.Use(control.Cache)
 
 	postR := sm.Methods(http.MethodPost).Subrouter()

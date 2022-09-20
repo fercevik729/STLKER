@@ -63,8 +63,11 @@ type Portfolio struct {
 // swagger:model
 type Profits struct {
 	// portfolio name
+	//
+	// example: Retirement Account
 	Name string `json:"Portfolio Name"`
 	// original value of the portfolio
+	//
 	OriginalValue float64 `json:"Original Value"`
 	// new value of the portfolio
 	NewValue float64 `json:"Current Value"`
