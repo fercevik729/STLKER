@@ -1,6 +1,23 @@
 basePath: /
 consumes:
     - application/json
+
+securityDefinitions:
+    cookieAuth:
+        type: apiKey
+        in: cookie
+        name: Access-Token
+    headerAuth:
+        type: apiKey
+        in: header
+        name: X-Access-Token
+    
+    
+
+security:
+    - cookieAuth: []
+    - headerAuth: []
+
 definitions:
     MoreStock:
         type: object
@@ -275,6 +292,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         post:
             description: Creates a new portfolio for a user
             operationId: createPortfolio
@@ -294,6 +314,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         put:
             description: Updates a given portfolio
             operationId: updatePortfolio
@@ -313,6 +336,10 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+
     /portfolios/{name}:
         delete:
             description: Deletes a given portfolio for a user
@@ -333,6 +360,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         get:
             description: Outputs a particular portfolio for a user
             operationId: getPortfolio
@@ -352,6 +382,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         post:
             description: Creates a new security
             operationId: createSecurity
@@ -378,6 +411,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         put:
             description: Updates a security's information for a given portfolio
             operationId: updateSecurity
@@ -403,6 +439,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
     /portfolios/{name}/{ticker}:
         delete:
             description: Deletes a security from a given portfolio
@@ -429,6 +468,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
         get:
             description: Outputs a security's details to the client
             operationId: readSecurity
@@ -454,6 +496,9 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
     /stocks/{ticker}/{currency}:
         get:
             description: Outputs a stock's financial details to the client in the requested currency
@@ -480,6 +525,7 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - stocks
+            security: []
     /stocks/more/{ticker}:
         get:
             description: Outputs more sophisticated stock informations
@@ -500,18 +546,21 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - stocks
+            security: []
 produces:
     - application/json
 responses:
     loginResponse:
         description: >
             Successfully authenticated.
-            The session ID is returned in a cookie named `token`. You need to include this cookie in subsequent requests.
+            The session ID is returned in a cookie named `Access-Token`. You need to include this cookie in subsequent requests.
+            The token string can also be included in the 'Authorization' header
         headers: 
             Set-Cookie:
             schema: 
                 type: string
-                example: JSESSIONID=abcde12345; Path=/; HttpOnly
+                required: true
+                example: Access-Token=abcde12345; Expires=Thurs, 22 Sep 2022/; HttpOnly; SameSite=None
     errorResponse:
         description: An errorResponse is an empty data structure to represent an http error
     messageResponse:
