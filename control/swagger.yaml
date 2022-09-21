@@ -162,27 +162,106 @@ definitions:
     ReqSecurity:
         type: object
         description: ReqSecurity defines the schema for a Security in a request payload
+        required:
+            - ticker
+            - shares
         properties:
-            Ticker:
+            ticker:
                 type: string
                 example: "F"
-                required: true
-            Shares:
+            shares:
                 type: float
                 example: 5.75
-                required: true
-
     Stock:
         type: object
         description: Stock is the struct equivalent to the body returned by the gRPC API
         properties:
-            
+            Symbol: 
+                type: string
+                example: NVDA
+            Open:         
+                type: float
+                example: 132.67
+            High:         
+                type: float
+                example: 135.36
+            Low:         
+                type: float
+                example: 131.09
+            Price:        
+                type: float
+                example: 132.28
+            Volume:       
+                type: float
+                example: 52303929
+            LTD:          
+                type: string
+                example: "2022-09-20"
+            PrevClose:    
+                type: float
+                example: 134.35
+            Change:       
+                type: float
+                example: 0.35
+            PercentChange:
+                type: string
+                example: "-1.5394%"
+            Destination:  
+                type: string
+                example: "EUR"
         x-go-package: github.com/fercevik729/STLKER/control/handlers
+    User:
+        type: object
+        description: a structure containing a user's name and password
+        required:
+            - username
+            - password
+        properties:
+            username:
+                type: string
+                example: Moneylover123
+            password:
+                type: string
+                example: p433word
+            
 info:
     description: Documentation for STLKER API
     title: of STLKER API
     version: 1.0.0
 paths:
+    /signup:
+        post:
+            summary: Creates a new user
+            requestBody:
+                required: true
+                description: A JSON object containing the login information
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/User'
+            security: []
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+            tags:
+                - auth
+
+    /login:
+        post:
+            summary: Logs in and returns the authentication cookie
+            requestBody:
+                required: true
+                description: A JSON object containing the login information
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/User'
+            security: []
+            responses:
+                "200":
+                    $ref: '#/responses/loginResponse'
+            tags:
+                - auth
     /portfolios:
         get:
             description: Outputs all of the portfolios for a user
@@ -207,7 +286,7 @@ paths:
               schema:
                 $ref: '#/definitions/Portfolio'
             responses:
-                "200":
+                "201":
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
@@ -260,7 +339,7 @@ paths:
             parameters:
                 - description: Name of the portfolio
                   in: path
-                  name: Name
+                  name: name
                   required: true
                   type: string
                   x-go-name: Name
@@ -279,7 +358,7 @@ paths:
             parameters:
                 - description: Name of the portfolio
                   in: path
-                  name: Name
+                  name: name
                   required: true
                   type: string
                   example: "CollegeFund"
@@ -291,7 +370,7 @@ paths:
                   schema:
                     $ref: '#/definitions/ReqSecurity'
             responses:
-                "200":
+                "201":
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
@@ -316,7 +395,7 @@ paths:
                   schema:
                     $ref: '#/definitions/ReqSecurity'
             responses:
-                "200":
+                "201":
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
@@ -342,7 +421,7 @@ paths:
                   type: string
                   x-go-name: Ticker
             responses:
-                "200":
+                "201":
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
@@ -424,10 +503,19 @@ paths:
 produces:
     - application/json
 responses:
+    loginResponse:
+        description: >
+            Successfully authenticated.
+            The session ID is returned in a cookie named `token`. You need to include this cookie in subsequent requests.
+        headers: 
+            Set-Cookie:
+            schema: 
+                type: string
+                example: JSESSIONID=abcde12345; Path=/; HttpOnly
     errorResponse:
         description: An errorResponse is an empty data structure to represent an http error
     messageResponse:
-        description: A messageResponse is diagnostic information returned to the client
+        description: A messageResponse returns diagnostic information to the client
     moreStockResponse:
         description: A moreStockResponse is more information about a single stock
         schema:

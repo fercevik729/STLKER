@@ -17,7 +17,7 @@ type Stock struct {
 	Low           float64
 	Price         float64
 	Volume        float64
-	LTD           float64
+	LTD           string
 	PrevClose     float64
 	Change        float64
 	PercentChange string
@@ -76,11 +76,11 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 		Low:           parseFloat(s.Low),
 		Price:         parseFloat(s.Price),
 		Volume:        parseFloat(s.Volume),
-		LTD:           parseFloat(s.LTD),
+		LTD:           s.LTD,
 		PrevClose:     parseFloat(s.PrevClose),
 		Change:        parseFloat(s.Change),
 		PercentChange: s.PercentChange,
-		Destination:   s.Destination,
+		Destination:   destCurr,
 	}, w)
 
 }

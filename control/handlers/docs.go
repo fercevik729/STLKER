@@ -54,7 +54,7 @@ type moreStockResponseWrapper struct {
 	Body MoreStock
 }
 
-// A messageResponse is diagnostic information returned to the client
+// A messageResponse returns diagnostic information to the client
 // swagger:response messageResponse
 type messageResponseWrapper struct {
 	// A message
