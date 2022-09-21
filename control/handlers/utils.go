@@ -99,6 +99,14 @@ func retrieveUsername(r *http.Request) string {
 	return ""
 }
 
+func parseFloat(s string) float64 {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
 // retrieveAdmin retrieves a boolean value from a request's context
 // to specify if the user was the admin
 func retrieveAdmin(r *http.Request) bool {

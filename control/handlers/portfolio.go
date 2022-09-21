@@ -32,29 +32,30 @@ type STLKERModel struct {
 	DeletedAt sql.NullTime `json:"-" gorm:"index"`
 }
 
-// swagger: parameters createPortfolio updatePortfolio
+// swagger:parameters createPortfolio updatePortfolio
 type ReqPortfolio struct {
 	// A single portfolio
 	// in: body
 	Body Portfolio
 }
 
-// A Portfolio defines the structure for an API portfolio
 // swagger:model
 type Portfolio struct {
-	// swagger: ignore
 	STLKERModel
 	// the name of the portfolio
 	//
+	// in: string
 	// required: true
 	Name string `json:"Name"`
 	// username of the portfolio's owner
 	//
+	// in: string
 	// required: true
 	// example: MoneyLover123
 	Username string `json:"Username"`
 	// Stocks is a list of Security structures
 	//
+	// in: Security
 	// required: true
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
@@ -315,7 +316,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 
 }
 
-// swagger:route DELETE /portfolios/{name} securities deletePortfolio
+// swagger:route DELETE /portfolios/{name} portfolios deletePortfolio
 // Deletes a given portfolio for a user
 // responses:
 //  200: messageResponse

@@ -3,19 +3,180 @@ consumes:
     - application/json
 definitions:
     MoreStock:
+        type: object
         description: MoreStock contains important financial metrics
+        properties:
+            Ticker:
+                type: string
+                example: MSFT
+            Name:             
+                type: string
+                example: Microsoft Corporation
+            Exchange:         
+                type: string
+                example: NASDAQ
+            Sector:           
+                type: string
+                example: TECHNOLOGY
+            MarketCap:
+                type: float
+                example: 1823603294000
+            PERatio:          
+                type: float
+                example: 25.34
+            PEGRatio:         
+                type: float
+                example: 1.817
+            DivPerShare:
+                type: float
+                example: 2.48      
+            EPS:
+                type: float
+                example: 9.65              
+            RevPerShare:      
+                type: float
+                example: 29.65              
+            ProfitMargin:     
+                type: float
+                example: 0.657              
+            YearHigh:
+                type: float
+                example: 341.7              
+            YearLow:
+                type: float
+                example: 239.4              
+            SharesOutstanding:
+                type: float
+                example: 7457890000              
+            PriceToBookRatio:
+                type: float
+                example: 10.96              
+            Beta:             
+                type: float
+                example: 0.943              
         x-go-package: github.com/fercevik729/STLKER/control/handlers
     Portfolio:
-        description: A Portfolio defines the structure for an API portfolio
+        type: object
+        description: A Portfolio defines the structure for a minimalist porfolio
+        required: 
+            - Name
+            - Username
+            - Securities
+        properties:
+            Name:
+                type: string
+                example: "RetirementFund"
+            Username:
+                type: string
+                example: "MoneyLover123"
+            Securities:
+                type: array
+                items:
+                    '#/definitions/Security'
+                example:
+                    - Ticker: "TSLA"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 1
+                      Gain: 297.81
+                      Change: "2827%"
+                      Currency: "USD"
+                    - Ticker: "AAPL"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 2
+                      Gain: 595.62
+                      Change: "2827%"
+                      Currency: "USD"
+
         x-go-package: github.com/fercevik729/STLKER/control/handlers
     Profits:
-        description: A Profits struct defines the structure for the profits of an API portfoli
+        type: object
+        description: Profits contains the profit breakdown for a given portfolio
+        properties:
+            Name: 
+                type: string
+                example: "401(k)" 
+            OriginalValue:
+                type: float
+                example: 218.4
+            NewValue:
+                type: float
+                example: 37047.6
+            NetGain:
+                type: float
+                example: 35651.43
+            NetChange:
+                type: string
+                example: "1221%"
+            Moves:
+                type: array
+                items:
+                    '#/definitions/Security'
+                example:
+                    - Ticker: "VOO"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 100
+                      Gain: 29700.81
+                      Change: "2827%"
+                      Currency: "USD"
+                    - Ticker: "AAPL"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 20
+                      Gain: 5950.62
+                      Change: "2827%"
+                      Currency: "USD"
+             
+                
+
         x-go-package: github.com/fercevik729/STLKER/control/handlers
     Security:
-        description: Product defines the structure for an API product
+        type: object
+        description: Security represents a single security and all of its financial details
+        properties:
+            Ticker:
+                type: string
+                example: "TSLA"
+            BoughtPrice: 
+                type: float
+                example: 10.92 
+            CurrPrice: 
+                type: string
+                example: 308.73
+            Shares:
+                type: float
+                example: 1 
+            Gain: 
+                type: float
+                example: 297.81
+            Change: 
+                type: string
+                example: "2827%"
+            Currency: 
+                type: string
+                example: "USD"
+
         x-go-package: github.com/fercevik729/STLKER/control/handlers
+    ReqSecurity:
+        type: object
+        description: ReqSecurity defines the schema for a Security in a request payload
+        properties:
+            Ticker:
+                type: string
+                example: "F"
+                required: true
+            Shares:
+                type: float
+                example: 5.75
+                required: true
+
     Stock:
+        type: object
         description: Stock is the struct equivalent to the body returned by the gRPC API
+        properties:
+            
         x-go-package: github.com/fercevik729/STLKER/control/handlers
 info:
     description: Documentation for STLKER API
@@ -42,6 +203,7 @@ paths:
             - description: A portfolio
               in: body
               name: Body
+              required: true
               schema:
                 $ref: '#/definitions/Portfolio'
             responses:
@@ -60,6 +222,7 @@ paths:
             - description: A portfolio
               in: body
               name: Body
+              required: true
               schema:
                 $ref: '#/definitions/Portfolio'
             responses:
@@ -90,14 +253,14 @@ paths:
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
-                - securities
+                - portfolios
         get:
-            description: Outputs a particulare portfolio for a user
+            description: Outputs a particular portfolio for a user
             operationId: getPortfolio
             parameters:
                 - description: Name of the portfolio
                   in: path
-                  name: name
+                  name: Name
                   required: true
                   type: string
                   x-go-name: Name
@@ -116,10 +279,17 @@ paths:
             parameters:
                 - description: Name of the portfolio
                   in: path
-                  name: name
+                  name: Name
                   required: true
                   type: string
+                  example: "CollegeFund"
                   x-go-name: Name
+                - description: The new security
+                  in: body
+                  required: true
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/ReqSecurity'
             responses:
                 "200":
                     $ref: '#/responses/messageResponse'
@@ -139,6 +309,12 @@ paths:
                   required: true
                   type: string
                   x-go-name: Name
+                - description: The updated security
+                  in: body
+                  required: true
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/ReqSecurity'
             responses:
                 "200":
                     $ref: '#/responses/messageResponse'

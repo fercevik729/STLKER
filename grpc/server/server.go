@@ -54,11 +54,11 @@ func (w *WatcherServer) GetInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.
 		High:          fmt.Sprintf("%.2f", oldHigh*rate),
 		Low:           fmt.Sprintf("%.2f", oldLow*rate),
 		Price:         fmt.Sprintf("%.2f", oldPrice*rate),
-		Destination:   tr.Destination.String(),
 		Volume:        s.Volume,
 		LTD:           s.LTD,
 		PrevClose:     fmt.Sprintf("%.2f", oldPrev*rate),
 		PercentChange: s.PercentChange,
+		Destination:   tr.Destination.String(),
 	}, nil
 }
 

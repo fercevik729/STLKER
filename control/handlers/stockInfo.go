@@ -12,15 +12,16 @@ import (
 // swagger:model
 type Stock struct {
 	Symbol        string
-	Open          string
-	High          string
-	Low           string
-	Price         string
-	Volume        string
-	LTD           string
-	PrevClose     string
-	Change        string
+	Open          float64
+	High          float64
+	Low           float64
+	Price         float64
+	Volume        float64
+	LTD           float64
+	PrevClose     float64
+	Change        float64
 	PercentChange string
+	Destination   string
 }
 
 // MoreStock contains important financial metrics
@@ -30,18 +31,18 @@ type MoreStock struct {
 	Name              string
 	Exchange          string
 	Sector            string
-	MarketCap         string
-	PERatio           string
-	PEGRatio          string
-	DivPerShare       string
-	EPS               string
-	RevPerShare       string
-	ProfitMargin      string
-	YearHigh          string
-	YearLow           string
-	SharesOutstanding string
-	PriceToBookRatio  string
-	Beta              string
+	MarketCap         float64
+	PERatio           float64
+	PEGRatio          float64
+	DivPerShare       float64
+	EPS               float64
+	RevPerShare       float64
+	ProfitMargin      float64
+	YearHigh          float64
+	YearLow           float64
+	SharesOutstanding float64
+	PriceToBookRatio  float64
+	Beta              float64
 }
 
 // swagger:route GET /stocks/{ticker}/{currency} stocks getInfo
@@ -70,15 +71,16 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	data.ToJSON(&Stock{
 		Symbol:        s.Symbol,
-		Open:          s.Open,
-		High:          s.High,
-		Low:           s.Low,
-		Price:         s.Price,
-		Volume:        s.Volume,
-		LTD:           s.LTD,
-		PrevClose:     s.PrevClose,
-		Change:        s.Change,
+		Open:          parseFloat(s.Open),
+		High:          parseFloat(s.High),
+		Low:           parseFloat(s.Low),
+		Price:         parseFloat(s.Price),
+		Volume:        parseFloat(s.Volume),
+		LTD:           parseFloat(s.LTD),
+		PrevClose:     parseFloat(s.PrevClose),
+		Change:        parseFloat(s.Change),
 		PercentChange: s.PercentChange,
+		Destination:   s.Destination,
 	}, w)
 
 }
@@ -109,17 +111,17 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 		Name:              co.Name,
 		Exchange:          co.Exchange,
 		Sector:            co.Sector,
-		MarketCap:         co.MarketCap,
-		PERatio:           co.PERatio,
-		PEGRatio:          co.PEGRatio,
-		DivPerShare:       co.DivPerShare,
-		EPS:               co.EPS,
-		RevPerShare:       co.RevPerShare,
-		ProfitMargin:      co.ProfitMargin,
-		YearHigh:          co.YearHigh,
-		YearLow:           co.YearLow,
-		SharesOutstanding: co.SharesOutstanding,
-		PriceToBookRatio:  co.PriceToBookRatio,
-		Beta:              co.Beta,
+		MarketCap:         parseFloat(co.MarketCap),
+		PERatio:           parseFloat(co.PERatio),
+		PEGRatio:          parseFloat(co.PEGRatio),
+		DivPerShare:       parseFloat(co.DivPerShare),
+		EPS:               parseFloat(co.EPS),
+		RevPerShare:       parseFloat(co.RevPerShare),
+		ProfitMargin:      parseFloat(co.ProfitMargin),
+		YearHigh:          parseFloat(co.YearHigh),
+		YearLow:           parseFloat(co.YearLow),
+		SharesOutstanding: parseFloat(co.SharesOutstanding),
+		PriceToBookRatio:  parseFloat(co.PriceToBookRatio),
+		Beta:              parseFloat(co.Beta),
 	}, w)
 }

@@ -10,15 +10,24 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// swagger: parameters createSecurity updateSecurity
+// swagger:parameters createSecurity updateSecurity
+type ReqSecurityWrapper struct {
+	// A single portfolio
+	// in: body
+	Body ReqSecurity
+}
+
+// swagger:model
 type ReqSecurity struct {
 	// ticker of the security
 	//
 	// required: true
+	// example: BYND
 	Ticker string `json:"Ticker"`
 	// number of shares of the security
 	//
 	// required: true
+	// example: BYND
 	Shares float64 `json:"Shares"`
 }
 
@@ -30,9 +39,6 @@ type Security struct {
 	// swagger: ignore
 	SecurityID int `gorm:"primary_key" json:"-"`
 	// ticker of the security
-	//
-	// required: true
-	// example: MSFT
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`

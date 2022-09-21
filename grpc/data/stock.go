@@ -17,6 +17,7 @@ type Stock struct {
 	PrevClose     string `json:"08. previous close"`
 	Change        string `json:"09. change"`
 	PercentChange string `json:"10. change percent"`
+	Destination   string `json:"Destination"`
 }
 
 // MoreStock contains important financial metrics returned by AV's

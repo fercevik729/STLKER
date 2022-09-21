@@ -3,3 +3,6 @@ check_install:
 
 swagger: check_install
 	swagger generate spec -o ./swagger.yaml --scan-models
+
+swagger2: check_install
+	swagger generate spec -o ./swagger.yml --scan-models
