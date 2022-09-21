@@ -12,8 +12,6 @@ securityDefinitions:
         in: header
         name: X-Access-Token
     
-    
-
 security:
     - cookieAuth: []
     - headerAuth: []
@@ -260,6 +258,10 @@ paths:
             responses:
                 "201":
                     $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/errorResponse'
+                "500":
+                    $ref: '#/responses/errorResponse'
             tags:
                 - auth
 
@@ -277,6 +279,12 @@ paths:
             responses:
                 "200":
                     $ref: '#/responses/loginResponse'
+                "400":
+                    $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/errorResponse'
             tags:
                 - auth
     /portfolios:
@@ -288,6 +296,8 @@ paths:
                     $ref: '#/responses/profitsResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -310,6 +320,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -332,6 +344,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -356,6 +370,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -378,6 +394,8 @@ paths:
                     $ref: '#/responses/profitResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -407,6 +425,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -435,6 +455,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -464,6 +486,8 @@ paths:
                     $ref: '#/responses/messageResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -492,6 +516,8 @@ paths:
                     $ref: '#/responses/securityResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
             tags:
@@ -554,7 +580,7 @@ responses:
         description: >
             Successfully authenticated.
             The session ID is returned in a cookie named `Access-Token`. You need to include this cookie in subsequent requests.
-            The token string can also be included in the 'Authorization' header
+            The token string can also be included in the `X-Access-Token` header
         headers: 
             Set-Cookie:
             schema: 
@@ -563,6 +589,8 @@ responses:
                 example: Access-Token=abcde12345; Expires=Thurs, 22 Sep 2022/; HttpOnly; SameSite=None
     errorResponse:
         description: An errorResponse is an empty data structure to represent an http error
+    unAuthResponse:
+        description: An unAuthResponse signifies that the user is unauthorized to make a request
     messageResponse:
         description: A messageResponse returns diagnostic information to the client
     moreStockResponse:
