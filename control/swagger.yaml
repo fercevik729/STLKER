@@ -264,7 +264,6 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - auth
-
     /login:
         post:
             summary: Logs in and returns the authentication cookie
@@ -287,6 +286,39 @@ paths:
                     $ref: '#/responses/errorResponse'
             tags:
                 - auth
+    /logout:
+        post:
+            description: Logs out a user
+            security:
+                - cookieAuth: []
+                - headerAuth: [] 
+            responses:
+                "200":
+                    $ref: '#/responses/noContetnResponse'
+                "400":
+                    $ref: '#/responses/errorResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/errorResponse'
+    /refresh:
+        post:
+            description: Returns a new `Access-Token` for a user
+            parameters:
+                - Refresh-Token:
+                    in: header
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    Access-Token:
+                                        type: string
+                                        example: "axjfe12982"
+
+
     /portfolios:
         get:
             description: Outputs all of the portfolios for a user
@@ -587,6 +619,20 @@ responses:
                 type: string
                 required: true
                 example: Access-Token=abcde12345; Expires=Thurs, 22 Sep 2022/; HttpOnly; SameSite=None
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        username:
+                            type: string
+                            example: "Moneylover123"
+                        Access-Token:
+                            type: string
+                            example: abcde12345
+                        Refresh-Token:
+                            type: string
+                            example: defk219a45
     errorResponse:
         description: An errorResponse is an empty data structure to represent an http error
     unAuthResponse:
@@ -615,6 +661,8 @@ responses:
         description: A stockResponse is information about a single stock returned to the client
         schema:
           $ref: '#/definitions/Stock'
+    noContentResponse:
+        description: Request has succeeded
 schemes:
     - http
 swagger: "2.0"

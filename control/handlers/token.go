@@ -208,7 +208,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	// Set HTTP cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
+		Name:     "Access-Token",
 		Value:    tokenStr,
 		Expires:  expTime,
 		HttpOnly: true,
