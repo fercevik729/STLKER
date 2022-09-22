@@ -266,7 +266,7 @@ paths:
                 - auth
     /login:
         post:
-            summary: Logs in and returns the authentication cookie
+            summary: Logs in a user
             requestBody:
                 required: true
                 description: A JSON object containing the login information
@@ -294,21 +294,24 @@ paths:
                 - headerAuth: [] 
             responses:
                 "200":
-                    $ref: '#/responses/noContetnResponse'
+                    $ref: '#/responses/noContentResponse'
                 "400":
                     $ref: '#/responses/errorResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
                     $ref: '#/responses/errorResponse'
+            tags:
+                - auth
     /refresh:
         post:
-            description: Returns a new `Access-Token` for a user
+            description: Refreshes the token
             parameters:
                 - Refresh-Token:
                     in: header
             responses:
                 "200":
+                    description: The updated `Access-Token`
                     content:
                         application/json:
                             schema:
@@ -317,6 +320,8 @@ paths:
                                     Access-Token:
                                         type: string
                                         example: "axjfe12982"
+            tags:
+                - auth
 
 
     /portfolios:
@@ -611,7 +616,7 @@ responses:
     loginResponse:
         description: >
             Successfully authenticated.
-            The session ID is returned in a cookie named `Access-Token`. You need to include this cookie in subsequent requests.
+            The session ID is returned in a cookie named Access-Token. You need to include this cookie in subsequent requests.
             The token string can also be included in the `X-Access-Token` header
         headers: 
             Set-Cookie:
@@ -662,7 +667,7 @@ responses:
         schema:
           $ref: '#/definitions/Stock'
     noContentResponse:
-        description: Request has succeeded
+        description: Request succeeded
 schemes:
     - http
 swagger: "2.0"

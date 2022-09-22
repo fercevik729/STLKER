@@ -143,7 +143,7 @@ func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	// Authentication routes
 	sm.HandleFunc("/signup", control.SignUp).Methods("POST")
 	sm.HandleFunc("/login", control.LogIn).Methods("POST")
-	sm.HandleFunc("/logout", control.LogOut).Methods("POST")
+	sm.HandleFunc("/logout", control.LogOut).Methods("POST").Subrouter().Use(handlers.Authenticate)
 	sm.HandleFunc("/refresh", control.Refresh).Methods("UPDATE")
 
 	putR := sm.Methods(http.MethodPut).Subrouter()
