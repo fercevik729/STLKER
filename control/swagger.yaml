@@ -1,0 +1,691 @@
+basePath: /
+consumes:
+    - application/json
+
+securityDefinitions:
+    cookieAuth:
+        type: apiKey
+        in: cookie
+        name: Access-Token
+    headerAuth:
+        type: apiKey
+        in: header
+        name: X-Access-Token
+    
+security:
+    - cookieAuth: []
+    - headerAuth: []
+
+definitions:
+    MoreStock:
+        type: object
+        description: MoreStock contains important financial metrics
+        properties:
+            Ticker:
+                type: string
+                example: MSFT
+            Name:             
+                type: string
+                example: Microsoft Corporation
+            Exchange:         
+                type: string
+                example: NASDAQ
+            Sector:           
+                type: string
+                example: TECHNOLOGY
+            MarketCap:
+                type: float
+                example: 1823603294000
+            PERatio:          
+                type: float
+                example: 25.34
+            PEGRatio:         
+                type: float
+                example: 1.817
+            DivPerShare:
+                type: float
+                example: 2.48      
+            EPS:
+                type: float
+                example: 9.65              
+            RevPerShare:      
+                type: float
+                example: 29.65              
+            ProfitMargin:     
+                type: float
+                example: 0.657              
+            YearHigh:
+                type: float
+                example: 341.7              
+            YearLow:
+                type: float
+                example: 239.4              
+            SharesOutstanding:
+                type: float
+                example: 7457890000              
+            PriceToBookRatio:
+                type: float
+                example: 10.96              
+            Beta:             
+                type: float
+                example: 0.943              
+        x-go-package: github.com/fercevik729/STLKER/control/handlers
+    Portfolio:
+        type: object
+        description: A Portfolio defines the structure for a minimalist porfolio
+        required: 
+            - Name
+            - Username
+            - Securities
+        properties:
+            Name:
+                type: string
+                example: "RetirementFund"
+            Username:
+                type: string
+                example: "MoneyLover123"
+            Securities:
+                type: array
+                items:
+                    '#/definitions/Security'
+                example:
+                    - Ticker: "TSLA"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 1
+                      Gain: 297.81
+                      Change: "2827%"
+                      Currency: "USD"
+                    - Ticker: "AAPL"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 2
+                      Gain: 595.62
+                      Change: "2827%"
+                      Currency: "USD"
+
+        x-go-package: github.com/fercevik729/STLKER/control/handlers
+    Profits:
+        type: object
+        description: Profits contains the profit breakdown for a given portfolio
+        properties:
+            Name: 
+                type: string
+                example: "401(k)" 
+            OriginalValue:
+                type: float
+                example: 218.4
+            NewValue:
+                type: float
+                example: 37047.6
+            NetGain:
+                type: float
+                example: 35651.43
+            NetChange:
+                type: string
+                example: "1221%"
+            Moves:
+                type: array
+                items:
+                    '#/definitions/Security'
+                example:
+                    - Ticker: "VOO"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 100
+                      Gain: 29700.81
+                      Change: "2827%"
+                      Currency: "USD"
+                    - Ticker: "AAPL"
+                      BoughtPrice: 10.92
+                      CurrPrice: 308.73
+                      Shares: 20
+                      Gain: 5950.62
+                      Change: "2827%"
+                      Currency: "USD"
+             
+                
+
+        x-go-package: github.com/fercevik729/STLKER/control/handlers
+    Security:
+        type: object
+        description: Security represents a single security and all of its financial details
+        properties:
+            Ticker:
+                type: string
+                example: "TSLA"
+            BoughtPrice: 
+                type: float
+                example: 10.92 
+            CurrPrice: 
+                type: string
+                example: 308.73
+            Shares:
+                type: float
+                example: 1 
+            Gain: 
+                type: float
+                example: 297.81
+            Change: 
+                type: string
+                example: "2827%"
+            Currency: 
+                type: string
+                example: "USD"
+
+        x-go-package: github.com/fercevik729/STLKER/control/handlers
+    ReqSecurity:
+        type: object
+        description: ReqSecurity defines the schema for a Security in a request payload
+        required:
+            - ticker
+            - shares
+        properties:
+            ticker:
+                type: string
+                example: "F"
+            shares:
+                type: float
+                example: 5.75
+    Stock:
+        type: object
+        description: Stock is the struct equivalent to the body returned by the gRPC API
+        properties:
+            Symbol: 
+                type: string
+                example: NVDA
+            Open:         
+                type: float
+                example: 132.67
+            High:         
+                type: float
+                example: 135.36
+            Low:         
+                type: float
+                example: 131.09
+            Price:        
+                type: float
+                example: 132.28
+            Volume:       
+                type: float
+                example: 52303929
+            LTD:          
+                type: string
+                example: "2022-09-20"
+            PrevClose:    
+                type: float
+                example: 134.35
+            Change:       
+                type: float
+                example: 0.35
+            PercentChange:
+                type: string
+                example: "-1.5394%"
+            Destination:  
+                type: string
+                example: "EUR"
+        x-go-package: github.com/fercevik729/STLKER/control/handlers
+    User:
+        type: object
+        description: a structure containing a user's name and password
+        required:
+            - username
+            - password
+        properties:
+            username:
+                type: string
+                example: Moneylover123
+            password:
+                type: string
+                example: p433word
+            
+info:
+    description: Documentation for STLKER API
+    title: of STLKER API
+    version: 1.0.0
+paths:
+    /signup:
+        post:
+            summary: Creates a new user
+            requestBody:
+                required: true
+                description: A JSON object containing the login information
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/User'
+            security: []
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - auth
+    /login:
+        post:
+            summary: Logs in a user
+            requestBody:
+                required: true
+                description: A JSON object containing the login information
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/User'
+            security: []
+            responses:
+                "200":
+                    $ref: '#/responses/loginResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - auth
+    /logout:
+        post:
+            description: Logs out a user
+            security:
+                - cookieAuth: []
+                - headerAuth: [] 
+            responses:
+                "200":
+                    $ref: '#/responses/noContentResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - auth
+    /refresh:
+        post:
+            description: Refreshes the token
+            parameters:
+                - Refresh-Token:
+                    in: header
+            responses:
+                "200":
+                    description: The updated `Access-Token`
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    Access-Token:
+                                        type: string
+                                        example: "axjfe12982"
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - auth
+    /deleteuser:
+        delete:
+            description: Deletes a user's account
+            security:
+                - cookieAuth: []
+                - headerAuth: [] 
+            responses:
+                "200":
+                    $ref: '#/responses/noContentResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+            tags:
+                - auth
+
+    /portfolios:
+        get:
+            description: Outputs all of the portfolios for a user
+            operationId: getPortfolios
+            responses:
+                "200":
+                    $ref: '#/responses/profitsResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        post:
+            description: Creates a new portfolio for a user
+            operationId: createPortfolio
+            parameters:
+            - description: A portfolio
+              in: body
+              name: Body
+              required: true
+              schema:
+                $ref: '#/definitions/Portfolio'
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        put:
+            description: Updates a given portfolio
+            operationId: updatePortfolio
+            parameters:
+            - description: A portfolio
+              in: body
+              name: Body
+              required: true
+              schema:
+                $ref: '#/definitions/Portfolio'
+            responses:
+                "200":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+
+    /portfolios/{name}:
+        delete:
+            description: Deletes a given portfolio for a user
+            operationId: deletePortfolio
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+            responses:
+                "200":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        get:
+            description: Outputs a particular portfolio for a user
+            operationId: getPortfolio
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+            responses:
+                "200":
+                    $ref: '#/responses/profitResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - portfolios
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        post:
+            description: Creates a new security
+            operationId: createSecurity
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  example: "CollegeFund"
+                  x-go-name: Name
+                - description: The new security
+                  in: body
+                  required: true
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/ReqSecurity'
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        put:
+            description: Updates a security's information for a given portfolio
+            operationId: updateSecurity
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - description: The updated security
+                  in: body
+                  required: true
+                  name: Body
+                  schema:
+                    $ref: '#/definitions/ReqSecurity'
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+    /portfolios/{name}/{ticker}:
+        delete:
+            description: Deletes a security from a given portfolio
+            operationId: deleteSecurity
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - description: Ticker of the security
+                  in: path
+                  name: ticker
+                  required: true
+                  type: string
+                  x-go-name: Ticker
+            responses:
+                "201":
+                    $ref: '#/responses/messageResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+        get:
+            description: Outputs a security's details to the client
+            operationId: readSecurity
+            parameters:
+                - description: Name of the portfolio
+                  in: path
+                  name: name
+                  required: true
+                  type: string
+                  x-go-name: Name
+                - description: Ticker of the security
+                  in: path
+                  name: ticker
+                  required: true
+                  type: string
+                  x-go-name: Ticker
+            responses:
+                "200":
+                    $ref: '#/responses/securityResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - securities
+            security:
+                - cookieAuth: []
+                - headerAuth: []
+    /stocks/{ticker}/{currency}:
+        get:
+            description: Outputs a stock's financial details to the client in the requested currency
+            operationId: getInfo
+            parameters:
+                - description: Ticker of the security
+                  in: path
+                  name: ticker
+                  required: true
+                  type: string
+                  x-go-name: Ticker
+                - description: Destination currency for the security's unit prices
+                  in: path
+                  name: currency
+                  required: true
+                  type: string
+                  x-go-name: Currency
+            responses:
+                "200":
+                    $ref: '#/responses/stockResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - stocks
+            security: []
+    /stocks/more/{ticker}:
+        get:
+            description: Outputs more sophisticated stock informations
+            operationId: moreInfo
+            parameters:
+                - description: Ticker of the security
+                  in: path
+                  name: ticker
+                  required: true
+                  type: string
+                  x-go-name: Ticker
+            responses:
+                "200":
+                    $ref: '#/responses/moreStockResponse'
+                "400":
+                    $ref: '#/responses/clientErrResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
+            tags:
+                - stocks
+            security: []
+produces:
+    - application/json
+responses:
+    loginResponse:
+        description: >
+            Successfully authenticated.
+            The session ID is returned in a cookie named Access-Token. You need to include this cookie in subsequent requests.
+            The token string can also be included in the `X-Access-Token` header
+        headers: 
+            Set-Cookie:
+            schema: 
+                type: string
+                required: true
+                example: Access-Token=abcde12345; Expires=Thurs, 22 Sep 2022/; HttpOnly; SameSite=None
+        content:
+            application/json:
+                schema:
+                    type: object
+                    properties:
+                        username:
+                            type: string
+                            example: "Moneylover123"
+                        Access-Token:
+                            type: string
+                            example: abcde12345
+                        Refresh-Token:
+                            type: string
+                            example: defk219a45
+    clientErrResponse:
+        description: A clientErrResponse represents a 4** http error
+    serverErrResponse:
+        description: An serverErrResponse represents a 5** http error
+    unAuthResponse:
+        description: An unAuthResponse signifies that the user is unauthorized to make a request
+    messageResponse:
+        description: A messageResponse returns diagnostic information to the client
+    moreStockResponse:
+        description: A moreStockResponse is more information about a single stock
+        schema:
+          $ref: '#/definitions/MoreStock'
+    profitResponse:
+        description: A profitResponse is a single portfolio returned to the client
+        schema:
+          $ref: '#/definitions/Profits'
+    profitsResponse:
+        description: A profits is a list of profits for each of the portfolios returned to the client
+        schema:
+          items:
+            $ref: '#/definitions/Profits'
+          type: array
+    securityResponse:
+        description: A securityResponse is a single security's information returned to the client
+        schema:
+          $ref: '#/definitions/Security'
+    stockResponse:
+        description: A stockResponse is information about a single stock returned to the client
+        schema:
+          $ref: '#/definitions/Stock'
+    noContentResponse:
+        description: Request succeeded
+schemes:
+    - http
+swagger: "2.0"

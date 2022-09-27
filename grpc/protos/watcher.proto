@@ -20,12 +20,11 @@ message TickerResponse {
 	string High = 3;
 	string Low = 4;
 	string Price = 5;
-  string Destination = 6;
-	string Volume = 7;
-  string LTD = 8;
-	string PrevClose = 9;
-	string Change = 10;
-	string PercentChange = 11;
+	string Volume = 6;
+  string LTD = 7;
+	string PrevClose = 8;
+	string Change = 9;
+	string PercentChange = 10;
 }
 
 message CompanyResponse {

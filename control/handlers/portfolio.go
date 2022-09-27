@@ -32,24 +32,51 @@ type STLKERModel struct {
 	DeletedAt sql.NullTime `json:"-" gorm:"index"`
 }
 
-// A Portfolio is a GORM model that is intended to mirror the structure
-// of a simple portfolio
+// swagger:parameters createPortfolio updatePortfolio
+type ReqPortfolio struct {
+	// A single portfolio
+	// in: body
+	Body Portfolio
+}
+
+// swagger:model
 type Portfolio struct {
 	STLKERModel
-	// Name is the name of the portfolio
-	Name     string `json:"Name"`
+	// the name of the portfolio
+	//
+	// in: string
+	// required: true
+	Name string `json:"Name"`
+	// username of the portfolio's owner
+	//
+	// in: string
+	// required: true
+	// example: MoneyLover123
 	Username string `json:"Username"`
-	// Stocks is a slice of Security structs
+	// Stocks is a list of Security structures
+	//
+	// in: Security
+	// required: true
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 
+// A Profits struct defines the structure for the profits of an API portfoli
+// swagger:model
 type Profits struct {
-	Name          string      `json:"Portfolio Name"`
-	OriginalValue float64     `json:"Original Value"`
-	NewValue      float64     `json:"Current Value"`
-	NetGain       float64     `json:"Net Gain"`
-	NetChange     string      `json:"Net Change"`
-	Moves         []*Security `json:"Securities"`
+	// portfolio name
+	//
+	// example: Retirement Account
+	Name string `json:"Portfolio Name"`
+	// original value of the portfolio
+	//
+	OriginalValue float64 `json:"Original Value"`
+	// new value of the portfolio
+	NewValue float64 `json:"Current Value"`
+	NetGain  float64 `json:"Net Gain"`
+	// change of the portfolio's value as a percentage
+	NetChange string `json:"Net Change"`
+	// list of all the securities
+	Moves []*Security `json:"Securities"`
 }
 
 func (p *Portfolio) calcProfits() (*Profits, error) {
@@ -92,6 +119,12 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 	}, nil
 }
 
+// swagger:route POST /portfolios portfolios createPortfolio
+// Creates a new portfolio for a user
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
@@ -142,6 +175,12 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 
 }
 
+// swagger:route GET /portfolios portfolios getPortfolios
+// Outputs all of the portfolios for a user
+// responses:
+//  200: profitsResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	username := retrieveUsername(r)
 	isAdmin := retrieveAdmin(r)
@@ -177,8 +216,6 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		}
 		// Return the table in json format
 		data.ToJSON(table, w)
-		// Cache it as well
-		err = c.setCache(r, table)
 		if err != nil {
 			c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
 			return
@@ -197,14 +234,16 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		profits = append(profits, prof)
 	}
 
-	if c.cache != nil {
-		c.setCache(r, &profits)
-	}
-
 	data.ToJSON(profits, w)
 
 }
 
+// swagger:route GET /portfolios/{name} portfolios getPortfolio
+// Outputs a particulare portfolio for a user
+// responses:
+//  200: profitResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter and username
 	name := mux.Vars(r)["name"]
@@ -237,16 +276,16 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if c.cache != nil {
-		err = c.setCache(r, profits)
-	}
-	if err != nil {
-		c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
-	}
 	data.ToJSON(profits, w)
 
 }
 
+// swagger:route PUT /portfolios portfolios updatePortfolio
+// Updates a given portfolio
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Get variables
 	username := retrieveUsername(r)
@@ -277,6 +316,12 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 
 }
 
+// swagger:route DELETE /portfolios/{name} portfolios deletePortfolio
+// Deletes a given portfolio for a user
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)

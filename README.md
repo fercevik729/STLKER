@@ -6,13 +6,12 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 
 ## Current Features
 * Utilizes a unary and streaming gRPC microservice as well as a RESTful one
-* JWT authentication and cookies
+* JWT authentication and HTTP cookies
 * Extensive use of GORM to interact with a sqlite database
 * Redis Caching
 * Test cases
 
 ## Future Features
-* Swagger Documentation
 * Dockerization
 
 ## Current endpoints
@@ -23,9 +22,12 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 * /stocks/{ticker}/{currency}
 * /signup
 * /login
-* /logout
-* /refresh
+* /logout (Requires authentication)
+* /refresh (Requires authentication)
 * /deleteuser (Requires authentication)
+
+## Documentation Sample
+![image](./control/assets/swagger-sample.png)
 
 ## Utilizing [`grpcurl`](https://github.com/fullstorydev/grpcurl)
 To send a request directly to the unary rpc's, one needs to do the following:

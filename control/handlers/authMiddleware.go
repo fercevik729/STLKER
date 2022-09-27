@@ -11,7 +11,7 @@ import (
 func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate token
-		status, claims := ValidateJWT(r, "token")
+		status, claims := ValidateJWT(r, "Access-Token")
 		if status != http.StatusOK {
 			w.WriteHeader(status)
 			data.ToJSON(ResponseMessage{

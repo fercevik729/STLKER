@@ -150,14 +150,14 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	}
 	// Set HTTP cookies for both tokens
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
+		Name:     "Access-Token",
 		Value:    tokenStr,
 		Expires:  expTime,
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:     "refreshToken",
+		Name:     "Refresh-Token",
 		Value:    rfTokenStr,
 		Expires:  expTime.Add(120 * time.Minute),
 		HttpOnly: true,
@@ -175,11 +175,11 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 	// Set max age to < 0 for token and refresh token cookies in order to delete them
 	http.SetCookie(w, &http.Cookie{
-		Name:   "token",
+		Name:   "Access-Token",
 		MaxAge: -1,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:   "refreshToken",
+		Name:   "Refresh-Token",
 		MaxAge: -1,
 	})
 	c.l.Println("[INFO] Logged out user:", retrieveUsername(r))
@@ -189,7 +189,7 @@ func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 // Refresh handles requests to /refresh and regenerates tokens if the current token
 // is within a minute of expiry
 func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	status, claims := ValidateJWT(r, "refreshToken")
+	status, claims := ValidateJWT(r, "Refresh-Token")
 	if status != http.StatusOK {
 		c.logHTTPError(w, "bad refresh token request", status)
 		return
@@ -208,7 +208,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	// Set HTTP cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
+		Name:     "Access-Token",
 		Value:    tokenStr,
 		Expires:  expTime,
 		HttpOnly: true,
@@ -234,10 +234,10 @@ func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // ValidateJWT checks if the JWT token in the request token is valid and returns an http status
-// code depending on if it is along with a pointer to a claim struct
+// code depending on if it is, along with a pointer to a claim struct
 func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	var tknStr string
-	tknStr = r.Header.Get("Authorization")
+	tknStr = r.Header.Get("X-Access-Token")
 
 	// If there was no token in the header check the cookies
 	if tknStr == "" {

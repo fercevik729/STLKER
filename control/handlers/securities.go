@@ -10,9 +10,35 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// swagger:parameters createSecurity updateSecurity
+type ReqSecurityWrapper struct {
+	// A single portfolio
+	// in: body
+	Body ReqSecurity
+}
+
+// swagger:model
+type ReqSecurity struct {
+	// ticker of the security
+	//
+	// required: true
+	// example: BYND
+	Ticker string `json:"Ticker"`
+	// number of shares of the security
+	//
+	// required: true
+	// example: BYND
+	Shares float64 `json:"Shares"`
+}
+
+// Product defines the structure for an API product
+// swagger:model
 type Security struct {
+	// swagger: ignore
 	STLKERModel
-	SecurityID  int     `gorm:"primary_key" json:"-"`
+	// swagger: ignore
+	SecurityID int `gorm:"primary_key" json:"-"`
+	// ticker of the security
 	Ticker      string  `json:"Ticker"`
 	BoughtPrice float64 `json:"Bought Price"`
 	CurrPrice   float64 `json:"Current Price"`
@@ -22,13 +48,8 @@ type Security struct {
 	// Currency is the destination currency of the stock
 	Currency string `json:"Currency" gorm:"default:USD"`
 	// Foreign key
+	// swagger: ignore
 	PortfolioID uint `json:"-"`
-}
-
-// Used for destructuring POST and PUT data
-type securityData struct {
-	Ticker string  `json:"Ticker"`
-	Shares float64 `json:"Shares"`
 }
 
 // setMoves sets the gain and change variables of s to the new parameters
@@ -37,7 +58,7 @@ func (s *Security) setMoves(gain float64, change string) {
 	s.Change = change
 }
 
-func (c *ControlHandler) newSecurity(params securityData, w http.ResponseWriter, portName string, username string) {
+func (c *ControlHandler) newSecurity(params ReqSecurity, w http.ResponseWriter, portName string, username string) {
 	ticker := params.Ticker
 	shares := params.Shares
 
@@ -76,18 +97,35 @@ func (c *ControlHandler) newSecurity(params securityData, w http.ResponseWriter,
 	}, w)
 }
 
+// swagger:route POST /portfolios/{name} securities createSecurity
+// Creates a new security
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 
 	// Get ticker and shares info from JSON body
-	var params securityData
+	var params ReqSecurity
 	data.FromJSON(&params, r.Body)
+	// Check if the payload is empty
+	if params == (ReqSecurity{}) {
+		c.logHTTPError(w, "Bad request payload", http.StatusBadRequest)
+		return
+	}
 
 	c.newSecurity(params, w, portName, username)
 }
 
+// swagger:route GET /portfolios/{name}/{ticker} securities readSecurity
+// Outputs a security's details to the client
+// responses:
+//  200: securityResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName, ticker, username := retrieveSecurityVars(r)
@@ -111,15 +149,21 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	data.ToJSON(&security, w)
 }
 
+// swagger:route PUT /portfolios/{name} securities updateSecurity
+// Updates a security's information for a given portfolio
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get request vars
 	portName := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
-	var sd securityData
+	var sd ReqSecurity
 	data.FromJSON(&sd, r.Body)
 
 	// Check if the payload is empty
-	if sd == (securityData{}) {
+	if sd == (ReqSecurity{}) {
 		c.logHTTPError(w, "Bad request payload", http.StatusBadRequest)
 		return
 	}
@@ -150,6 +194,12 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 
 }
 
+// swagger:route DELETE /portfolios/{name}/{ticker} securities deleteSecurity
+// Deletes a security from a given portfolio
+// responses:
+//  200: messageResponse
+//  400: errorResponse
+//  500: errorResponse
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker, username := retrieveSecurityVars(r)
 	// Connect to database
