@@ -259,9 +259,9 @@ paths:
                 "201":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - auth
     /login:
@@ -279,11 +279,11 @@ paths:
                 "200":
                     $ref: '#/responses/loginResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - auth
     /logout:
@@ -296,11 +296,11 @@ paths:
                 "200":
                     $ref: '#/responses/noContentResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - auth
     /refresh:
@@ -320,6 +320,10 @@ paths:
                                     Access-Token:
                                         type: string
                                         example: "axjfe12982"
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+                "500":
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - auth
     /deleteuser:
@@ -344,11 +348,11 @@ paths:
                 "200":
                     $ref: '#/responses/profitsResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - portfolios
             security:
@@ -368,11 +372,11 @@ paths:
                 "201":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - portfolios
             security:
@@ -392,11 +396,11 @@ paths:
                 "200":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - portfolios
             security:
@@ -418,11 +422,11 @@ paths:
                 "200":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - portfolios
             security:
@@ -442,11 +446,11 @@ paths:
                 "200":
                     $ref: '#/responses/profitResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - portfolios
             security:
@@ -473,11 +477,11 @@ paths:
                 "201":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - securities
             security:
@@ -503,11 +507,11 @@ paths:
                 "201":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - securities
             security:
@@ -534,11 +538,11 @@ paths:
                 "201":
                     $ref: '#/responses/messageResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - securities
             security:
@@ -564,11 +568,11 @@ paths:
                 "200":
                     $ref: '#/responses/securityResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "401":
                     $ref: '#/responses/unAuthResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - securities
             security:
@@ -595,9 +599,9 @@ paths:
                 "200":
                     $ref: '#/responses/stockResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - stocks
             security: []
@@ -616,9 +620,9 @@ paths:
                 "200":
                     $ref: '#/responses/moreStockResponse'
                 "400":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/clientErrResponse'
                 "500":
-                    $ref: '#/responses/errorResponse'
+                    $ref: '#/responses/serverErrResponse'
             tags:
                 - stocks
             security: []
@@ -650,8 +654,10 @@ responses:
                         Refresh-Token:
                             type: string
                             example: defk219a45
-    errorResponse:
-        description: An errorResponse is an empty data structure to represent an http error
+    clientErrResponse:
+        description: A clientErrResponse represents a 4** http error
+    serverErrResponse:
+        description: An serverErrResponse represents a 5** http error
     unAuthResponse:
         description: An unAuthResponse signifies that the user is unauthorized to make a request
     messageResponse:
