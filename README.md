@@ -12,7 +12,6 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 * Test cases
 
 ## Future Features
-* Swagger Documentation
 * Dockerization
 
 ## Current endpoints
