@@ -27,6 +27,9 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 * /refresh (Requires authentication)
 * /deleteuser (Requires authentication)
 
+## Documentation Sample
+![image](./control/assets/swagger-sample.png)
+
 ## Utilizing [`grpcurl`](https://github.com/fullstorydev/grpcurl)
 To send a request directly to the unary rpc's, one needs to do the following:
 ```shell
