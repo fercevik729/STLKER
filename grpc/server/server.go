@@ -58,7 +58,6 @@ func (w *WatcherServer) GetInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.
 		LTD:           s.LTD,
 		PrevClose:     fmt.Sprintf("%.2f", oldPrev*rate),
 		PercentChange: s.PercentChange,
-		Destination:   tr.Destination.String(),
 	}, nil
 }
 

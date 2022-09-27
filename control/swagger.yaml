@@ -322,7 +322,19 @@ paths:
                                         example: "axjfe12982"
             tags:
                 - auth
-
+    /deleteuser:
+        delete:
+            description: Deletes a user's account
+            security:
+                - cookieAuth: []
+                - headerAuth: [] 
+            responses:
+                "200":
+                    $ref: '#/responses/noContentResponse'
+                "401":
+                    $ref: '#/responses/unAuthResponse'
+            tags:
+                - auth
 
     /portfolios:
         get:

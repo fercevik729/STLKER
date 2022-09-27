@@ -6,7 +6,7 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 
 ## Current Features
 * Utilizes a unary and streaming gRPC microservice as well as a RESTful one
-* JWT authentication and cookies
+* JWT authentication and HTTP cookies
 * Extensive use of GORM to interact with a sqlite database
 * Redis Caching
 * Test cases
@@ -23,8 +23,8 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 * /stocks/{ticker}/{currency}
 * /signup
 * /login
-* /logout
-* /refresh
+* /logout (Requires authentication)
+* /refresh (Requires authentication)
 * /deleteuser (Requires authentication)
 
 ## Utilizing [`grpcurl`](https://github.com/fullstorydev/grpcurl)
