@@ -63,7 +63,7 @@ func (c *ControlHandler) newSecurity(params ReqSecurity, w http.ResponseWriter, 
 	shares := params.Shares
 
 	// Create sql db instance
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -100,9 +100,10 @@ func (c *ControlHandler) newSecurity(params ReqSecurity, w http.ResponseWriter, 
 // swagger:route POST /portfolios/{name} securities createSecurity
 // Creates a new security
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName := mux.Vars(r)["name"]
@@ -123,13 +124,14 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 // swagger:route GET /portfolios/{name}/{ticker} securities readSecurity
 // Outputs a security's details to the client
 // responses:
-//  200: securityResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: securityResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName, ticker, username := retrieveSecurityVars(r)
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -152,9 +154,10 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 // swagger:route PUT /portfolios/{name} securities updateSecurity
 // Updates a security's information for a given portfolio
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get request vars
 	portName := mux.Vars(r)["name"]
@@ -169,7 +172,7 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Create sql db instance
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -197,13 +200,14 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 // swagger:route DELETE /portfolios/{name}/{ticker} securities deleteSecurity
 // Deletes a security from a given portfolio
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker, username := retrieveSecurityVars(r)
 	// Connect to database
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return

@@ -122,9 +122,10 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 // swagger:route POST /portfolios portfolios createPortfolio
 // Creates a new portfolio for a user
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the portfolio from the request body
 	reqPort := Portfolio{}
@@ -141,7 +142,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	reqPort.Username = username
 
 	// Open sqlite db connection
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -178,16 +179,17 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /portfolios portfolios getPortfolios
 // Outputs all of the portfolios for a user
 // responses:
-//  200: profitsResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: profitsResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	username := retrieveUsername(r)
 	isAdmin := retrieveAdmin(r)
 	var ports []Portfolio
 
 	// Open database
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -241,16 +243,17 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 // swagger:route GET /portfolios/{name} portfolios getPortfolio
 // Outputs a particulare portfolio for a user
 // responses:
-//  200: profitResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: profitResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve portfolio name parameter and username
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 
 	// Open sqlite db connection
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -283,9 +286,10 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 // swagger:route PUT /portfolios portfolios updatePortfolio
 // Updates a given portfolio
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Get variables
 	username := retrieveUsername(r)
@@ -319,9 +323,10 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 // swagger:route DELETE /portfolios/{name} portfolios deletePortfolio
 // Deletes a given portfolio for a user
 // responses:
-//  200: messageResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: messageResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)

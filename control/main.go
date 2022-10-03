@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,27 +20,47 @@ import (
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var ring *redis.Ring
-var dbName string
+var dsn string
 
-// TODO: create swagger documentation
 func init() {
 	// Load environmental variables
 	err := godotenv.Load("../vars.env")
 	if err != nil {
 		panic(errors.New("couldn't load environmental variables from ../vars.env"))
 	}
+	// Get DB_HOST
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		panic(errors.New("couldn't retrieve DB_HOST"))
+	}
+	// Get DB_USER
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		panic(errors.New("couldn't retrieve DB_USER"))
+	}
+	// Get DB_Password
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		panic(errors.New("couldn't retrieve DB_PASSWORD"))
+	}
 	// Get database name
-	dbName = os.Getenv("DB_NAME")
+	dbName := os.Getenv("DB_NAME")
 	if dbName == "" {
 		panic(errors.New("couldn't retrieve DB_NAME"))
 	}
+	// Get database port
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		panic(errors.New("couldn't retrieve DB_PORT"))
+	}
 	// Initialize database
-	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
+	dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s TimeZone=PDT", dbHost, dbUser, dbPassword, dbName, dbPort)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +91,7 @@ func main() {
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, wc, ring, dbName)
+	control := handlers.NewControlHandler(l, wc, ring, dsn)
 	// Register routes
 	registerRoutes(sm, control)
 	// CORS for UI (maybe)

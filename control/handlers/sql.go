@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -17,7 +17,7 @@ func (c *ControlHandler) replacePortfolio(portName string, username string, newP
 		sec  Security
 	)
 	// Create a new gorm db connection
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		return err
 	}
@@ -48,8 +48,8 @@ func getPortfolioId(db *gorm.DB, portName string, username string) int {
 }
 
 // newGormDBConn opens a new gorm database connection
-func newGormDBConn(databaseName string) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(databaseName), &gorm.Config{})
+func newGormDBConn(dsn string) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Create database connection
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -95,7 +95,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Connect to database
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return
@@ -222,7 +222,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	db, err := newGormDBConn(c.dbName)
+	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
 		return

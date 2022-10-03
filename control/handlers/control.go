@@ -15,11 +15,11 @@ type ControlHandler struct {
 	l      *log.Logger
 	client pb.WatcherClient
 	cache  *cache.Cache
-	dbName string
+	dsn    string
 }
 
 // NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring, db string) *ControlHandler {
+func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring, dsn string) *ControlHandler {
 	// Check if redis options were presented
 	var c *cache.Cache
 	if rOptions != nil {
@@ -33,6 +33,6 @@ func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Rin
 		l:      log,
 		client: wc,
 		cache:  c,
-		dbName: db,
+		dsn:    dsn,
 	}
 }
