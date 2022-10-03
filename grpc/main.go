@@ -15,9 +15,9 @@ import (
 )
 
 func init() {
-	err := godotenv.Load("../vars.env")
+	err := godotenv.Load("grpc.env")
 	if err != nil {
-		panic(errors.New("couldn't load variables from ../vars.env"))
+		panic(errors.New("couldn't load variables from grpc.env"))
 	}
 }
 

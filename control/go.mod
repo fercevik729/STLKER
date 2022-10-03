@@ -11,10 +11,9 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
-	github.com/mattn/go-sqlite3 v1.14.13
 	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be
 	google.golang.org/grpc v1.47.0
-	gorm.io/driver/sqlite v1.3.4
+	gorm.io/driver/postgres v1.3.10
 	gorm.io/gorm v1.23.10
 )
 
@@ -63,5 +62,4 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gorm.io/driver/postgres v1.3.10 // indirect
 )

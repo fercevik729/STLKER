@@ -7,7 +7,6 @@ import (
 
 	"github.com/fercevik729/STLKER/control/data"
 	"github.com/gorilla/mux"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // swagger:parameters createSecurity updateSecurity

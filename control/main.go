@@ -29,14 +29,14 @@ var dsn string
 
 func init() {
 	// Load environmental variables
-	err := godotenv.Load("../vars.env")
+	err := godotenv.Load("control.env")
 	if err != nil {
-		panic(errors.New("couldn't load environmental variables from ../vars.env"))
+		panic(errors.New("couldn't load environmental variables from control.env"))
 	}
 	// Get DB_HOST
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
-		panic(errors.New("couldn't retrieve DB_HOST"))
+		dbHost = "localhost"
 	}
 	// Get DB_USER
 	dbUser := os.Getenv("DB_USER")
@@ -59,7 +59,8 @@ func init() {
 		panic(errors.New("couldn't retrieve DB_PORT"))
 	}
 	// Initialize database
-	dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s", dbHost, dbUser, dbPassword, dbName, dbPort)
+	dsn = fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		dbUser, dbPassword, dbHost, dbPort, dbName)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -70,7 +71,7 @@ func init() {
 	// Initialize redis options
 	ring = redis.NewRing(&redis.RingOptions{
 		Addrs: map[string]string{
-			"server1": ":6379",
+			"server1": fmt.Sprintf("%s:6379", os.Getenv("DB_HOST")),
 		},
 	})
 
