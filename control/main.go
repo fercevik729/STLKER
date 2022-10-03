@@ -81,7 +81,7 @@ func main() {
 	l := log.New(os.Stdout, "control", log.LstdFlags)
 
 	// Dial gRPC server
-	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(fmt.Sprintf("%s:9090", os.Getenv("DB_HOST")), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Println("[ERROR] dialing gRPC server")
 		panic(err)
@@ -100,7 +100,7 @@ func main() {
 
 	// Create server
 	s := &http.Server{
-		Addr:         "localhost:8080",
+		Addr:         "0.0.0.0:8080",
 		Handler:      ch(sm),
 		ErrorLog:     l,
 		IdleTimeout:  5 * time.Second,
