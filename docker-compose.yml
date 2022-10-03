@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  control:
+    build: "./control"
+    ports:
+     - "8080:8080"
+    depends_on:
+      - sqlite
+      - grpc
+      - redis
+  redis:
+    image: redis
+  grpc:
+    build: "./grpc"
+    ports:
+    - "9090:9090"
+  # TODO: add sqlite db
