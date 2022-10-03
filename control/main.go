@@ -59,7 +59,7 @@ func init() {
 		panic(errors.New("couldn't retrieve DB_PORT"))
 	}
 	// Initialize database
-	dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s TimeZone=PDT", dbHost, dbUser, dbPassword, dbName, dbPort)
+	dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s", dbHost, dbUser, dbPassword, dbName, dbPort)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)

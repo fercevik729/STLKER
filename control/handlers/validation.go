@@ -22,8 +22,8 @@ func validatePortfolio(port *Portfolio) (bool, string) {
 // validateUser validates a user
 func validateUser(usr User) (bool, string) {
 	// Check the lengths
-	if len(usr.Username) < 6 || len(usr.Username) > 30 || len(usr.Password) < 10 || len(usr.Password) > 100 {
-		return false, "Username must be between 6 and 30 characters. Password must be between 10 and 100 characters"
+	if len(usr.Username) < 5 || len(usr.Username) > 30 || len(usr.Password) < 10 || len(usr.Password) > 100 {
+		return false, "Username must be between 5 and 30 characters. Password must be between 10 and 100 characters"
 	}
 	// Check if the username or pwd contain invalid chars or the password contains the username
 	if strings.ContainsAny(usr.Username, "(){}[]|!%^@:;&_'-+<>") || strings.ContainsAny(usr.Password, "(){}[]|!%^@:;&_'-+<>") || strings.Contains(usr.Password, usr.Username) {
