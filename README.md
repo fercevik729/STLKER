@@ -7,12 +7,11 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 ## Current Features
 * Utilizes a unary and streaming gRPC microservice as well as a RESTful one
 * JWT authentication and HTTP cookies
-* Extensive use of GORM to interact with a sqlite database
-* Redis Caching
+* Extensive use of GORM to interact with a PostgreSQL database
+* Redis Caching for certain endpoints
+* Open-Api/Swagger Documentation
 * Test cases
-
-## Future Features
-* Dockerization
+* Docker support
 
 ## Current endpoints
 * /portfolios (Requires authentication)
@@ -47,6 +46,12 @@ This will create a connection that stays alive by which you can send many reques
   {"Ticker": "MSFT", "Destination": "EUR"}
 ```
 and also be periodically updated with new stock price data. To terminate this connection a simple CTRL-C is sufficient.
+
+## Docker 🐳
+The fastest way to deploy this application would be via Docker--specifically `docker-compose`. Certain environmental variables are hidden though, which Docker needs. However, error messages in the program will instruct you where to place your .env files. Then, you can run the entire application from root with a simple call to `docker-compose --env-file {path-to-your-env-file}.env up`. If you do not plan to use environmental variables or intend on hard-coding them into the application (not recommended) ignore the former and simply do `docker-compose up` from root.
+
+## Running locally (not recommended)
+In order to run this application on your machine you would need to install and setup PostgreSQL or another SQL database and modify the ORM code accordingly. You would also need to install redis and download all the golang dependencies in /grpc and /control
 
 ## Disclaimer
 This program is not intended to provide real-time stock information as it utilizes free publicly available API's by Alpha Vantage which provides information that is slightly delayed.
