@@ -48,9 +48,10 @@ type MoreStock struct {
 // swagger:route GET /stocks/{ticker}/{currency} stocks getInfo
 // Outputs a stock's financial details to the client in the requested currency
 // responses:
-//  200: stockResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: stockResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve URI variables
@@ -67,6 +68,7 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	// Write the data to the client
 	w.Header().Set("Content-Type", "application/json")
 	if c.cache != nil {
+		c.l.Println("[INFO] Setting cache...")
 		c.setStockCache(r, &s)
 	}
 	data.ToJSON(&Stock{
@@ -88,9 +90,10 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 // swagger:route GET /stocks/more/{ticker} stocks moreInfo
 // Outputs more sophisticated stock informations
 // responses:
-//  200: moreStockResponse
-//  400: errorResponse
-//  500: errorResponse
+//
+//	200: moreStockResponse
+//	400: errorResponse
+//	500: errorResponse
 func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	// Retrieve URI variable
 	vars := mux.Vars(r)
@@ -105,6 +108,7 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if c.cache != nil {
 		c.setStockCache(r, &co)
+		c.l.Println("[INFO] Setting cache...")
 	}
 	data.ToJSON(&MoreStock{
 		Ticker:            co.Ticker,
