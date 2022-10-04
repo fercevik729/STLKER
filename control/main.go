@@ -34,10 +34,7 @@ func init() {
 		panic(errors.New("couldn't load environmental variables from control.env"))
 	}
 	// Get DB_HOST
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
-	}
+	dbHost := "db"
 	// Get DB_USER
 	dbUser := os.Getenv("DB_USER")
 	if dbUser == "" {
@@ -71,7 +68,7 @@ func init() {
 	// Initialize redis options
 	ring = redis.NewRing(&redis.RingOptions{
 		Addrs: map[string]string{
-			"server1": fmt.Sprintf("%s:6379", os.Getenv("DB_HOST")),
+			"server1": "redis:6379",
 		},
 	})
 
@@ -81,7 +78,7 @@ func main() {
 	l := log.New(os.Stdout, "control", log.LstdFlags)
 
 	// Dial gRPC server
-	conn, err := grpc.Dial(fmt.Sprintf("%s:9090", os.Getenv("DB_HOST")), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("grpc:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Println("[ERROR] dialing gRPC server")
 		panic(err)
