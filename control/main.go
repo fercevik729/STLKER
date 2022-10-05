@@ -28,36 +28,22 @@ var ring *redis.Ring
 var dsn string
 
 func init() {
-	// Load environmental variables
-	err := godotenv.Load("../app.env")
-	if err != nil {
-		panic(errors.New("couldn't load environmental variables from control.env"))
-	}
-	// Get DB_HOST
-	dbHost := "db"
-	// Get DB_USER
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		panic(errors.New("couldn't retrieve DB_USER"))
-	}
 	// Get DB_Password
 	dbPassword := os.Getenv("DB_PASSWORD")
 	if dbPassword == "" {
 		panic(errors.New("couldn't retrieve DB_PASSWORD"))
 	}
-	// Get database name
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		panic(errors.New("couldn't retrieve DB_NAME"))
-	}
-	// Get database port
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		panic(errors.New("couldn't retrieve DB_PORT"))
+	// Load environmental variables if db password couldn't be obtained
+	if dbPassword == "" {
+		log.Println("[INFO] Couldn't get DB_PASSWORD. Trying to load it in from ../app.env")
+		err := godotenv.Load("../app.env")
+		if err != nil {
+			panic(errors.New("couldn't load environmental variables from ../app.env"))
+		}
 	}
 	// Initialize database
-	dsn = fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
-		dbUser, dbPassword, dbHost, dbPort, dbName)
+	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",
+		dbPassword)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)

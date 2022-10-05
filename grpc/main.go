@@ -14,11 +14,19 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+var apiKey string
+
 func init() {
-	err := godotenv.Load("../app.env")
-	if err != nil {
-		panic(errors.New("couldn't load variables from grpc.env"))
+	// Load the API_KEY before hand
+	apiKey = os.Getenv("API_Key")
+	if apiKey == "" {
+		log.Println("[INFO] Couldn't get API_KEY. Trying to load it from ../app.env")
+		err := godotenv.Load("../app.env")
+		if err != nil {
+			panic(errors.New("couldn't load variables from app.env"))
+		}
 	}
+
 }
 
 func main() {
@@ -33,7 +41,7 @@ func main() {
 	// Initialize the gRPC server instance
 	sp := data.NewStockPrices(l)
 	gs := grpc.NewServer()
-	ws := server.NewWatcher(sp, l)
+	ws := server.NewWatcher(sp, l, apiKey)
 	// Register the Watcher server
 	pb.RegisterWatcherServer(gs, ws)
 	reflection.Register(gs)

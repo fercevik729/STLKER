@@ -19,14 +19,16 @@ type WatcherServer struct {
 	l                 *log.Logger
 	subscribedTickers map[pb.Watcher_SubscribeTickerServer][]*pb.TickerRequest
 	exchangeRates     map[string]float64
+	apiKey            string
 }
 
-func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
+func NewWatcher(sp *data.StockPrices, l *log.Logger, key string) *WatcherServer {
 	w := &WatcherServer{
 		stockPrices:       sp,
 		l:                 l,
 		subscribedTickers: make(map[pb.Watcher_SubscribeTickerServer][]*pb.TickerRequest),
 		exchangeRates:     make(map[string]float64),
+		apiKey:            key,
 	}
 	go w.handleUpdates()
 	return w
@@ -34,7 +36,7 @@ func NewWatcher(sp *data.StockPrices, l *log.Logger) *WatcherServer {
 
 // GetInfo returns a TickerResponse containing the price of the security in USD
 func (w *WatcherServer) GetInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.TickerResponse, error) {
-	s := w.stockPrices.GetInfo(tr.Ticker)
+	s := w.stockPrices.GetInfo(tr.Ticker, w.apiKey)
 	// Parse old
 	oldOpen, _ := strconv.ParseFloat(s.Open, 64)
 	oldHigh, _ := strconv.ParseFloat(s.High, 64)
@@ -94,7 +96,7 @@ func (w *WatcherServer) handleUpdates() {
 
 // MoreInfo returns a CompanyResponse containing important financial ratios
 func (w *WatcherServer) MoreInfo(ctx context.Context, tr *pb.TickerRequest) (*pb.CompanyResponse, error) {
-	ms := w.stockPrices.MoreInfo(tr.Ticker)
+	ms := w.stockPrices.MoreInfo(tr.Ticker, w.apiKey)
 	return &pb.CompanyResponse{
 		Ticker:            tr.Ticker,
 		Name:              ms.Name,

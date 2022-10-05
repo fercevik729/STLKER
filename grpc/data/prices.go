@@ -3,7 +3,6 @@ package data
 import (
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -23,16 +22,11 @@ func NewStockPrices(l *log.Logger) *StockPrices {
 }
 
 // GetInfo sends HTTP requests to the Alpha Vantage API to get stock info for the specified ticker
-func (sp *StockPrices) GetInfo(ticker string) *Stock {
+func (sp *StockPrices) GetInfo(ticker string, key string) *Stock {
 	sp.l.Println("[INFO] Handle GetInfo for ticker:", ticker)
 	// Check if US markets are closed
 	if MarketsClosed(time.Now()) {
 		sp.l.Println("[WARNING] Markets are closed")
-	}
-	// Load the api key
-	key := os.Getenv("API_KEY")
-	if key == "" {
-		sp.l.Println("[ERROR] Couldn't retrieve API KEY")
 	}
 	// Get the new stock price from Alpha Vantage
 	url := "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + ticker + "&apikey=" + key
@@ -57,17 +51,12 @@ func (sp *StockPrices) GetInfo(ticker string) *Stock {
 }
 
 // MoreInfo sends HTTP requests to the Alpha Vantage API to get the company overview for a specified ticker
-func (sp *StockPrices) MoreInfo(ticker string) *MoreStock {
+func (sp *StockPrices) MoreInfo(ticker string, key string) *MoreStock {
 	sp.l.Println("[INFO] Handle MoreInfo for ticker:", ticker)
 
 	// Warn if markets are closed
 	if MarketsClosed(time.Now()) {
 		sp.l.Println("[WARNING] Markets are closed")
-	}
-	// Load the api key
-	key := os.Getenv("API_KEY")
-	if key == "" {
-		sp.l.Println("[ERROR] Couldn't retrieve API_KEY")
 	}
 	// Get the company overview from Alpha Vantage
 	url := "https://www.alphavantage.co/query?function=OVERVIEW&symbol=" + ticker + "&apikey=" + key
