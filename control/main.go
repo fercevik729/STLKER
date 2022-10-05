@@ -28,10 +28,10 @@ var dsn string
 
 func init() {
 	// Get DB_Password
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
+	dbPassword := os.Getenv("DB_PASS")
 	// Panic if it can't
 	if dbPassword == "" {
-		panic(errors.New("couldn't get POSTGRES_PASSWORD"))
+		panic(errors.New("couldn't get DB_PASS"))
 	}
 	// Initialize database
 	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",

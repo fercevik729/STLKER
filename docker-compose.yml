@@ -9,6 +9,8 @@ services:
       - db
       - grpc
       - redis
+    environment:
+      - DB_PASS=${DB_PASS}
   redis:
     image: redis
     ports:
