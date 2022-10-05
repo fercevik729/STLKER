@@ -23,6 +23,7 @@ func init() {
 	if apiKey == "" {
 		panic(errors.New("couldn't get API_KEY"))
 	}
+	log.Println("[INFO] API_KEY is:", apiKey)
 
 }
 

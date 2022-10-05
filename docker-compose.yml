@@ -10,7 +10,7 @@ services:
       - grpc
       - redis
     environment:
-      - DB_PASS=${DB_PASS}
+      - DB_PASS=${DB_PASSWORD}
   redis:
     image: redis
     ports:
