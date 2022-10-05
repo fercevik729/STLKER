@@ -29,7 +29,7 @@ var dsn string
 
 func init() {
 	// Load environmental variables
-	err := godotenv.Load("control.env")
+	err := godotenv.Load("../app.env")
 	if err != nil {
 		panic(errors.New("couldn't load environmental variables from control.env"))
 	}
