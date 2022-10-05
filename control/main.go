@@ -17,7 +17,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	goHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"gorm.io/driver/postgres"
@@ -29,15 +28,10 @@ var dsn string
 
 func init() {
 	// Get DB_Password
-	dbPassword := os.Getenv("DB_PASSWORD")
-	// Load environmental variables if db password couldn't be obtained
+	dbPassword := os.Getenv("POSTGRES_PASSWORD")
+	// Panic if it can't
 	if dbPassword == "" {
-		log.Println("[INFO] Couldn't get DB_PASSWORD. Trying to load it in from ../app.env")
-		err := godotenv.Load("../app.env")
-		if err != nil {
-			panic(errors.New("couldn't load environmental variables from ../app.env"))
-		}
-		dbPassword = os.Getenv("DB_PASSWORD")
+		panic(errors.New("couldn't get POSTGRES_PASSWORD"))
 	}
 	// Initialize database
 	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",

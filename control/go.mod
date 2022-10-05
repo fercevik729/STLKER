@@ -10,7 +10,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/joho/godotenv v1.4.0
 	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be
 	google.golang.org/grpc v1.47.0
 	gorm.io/driver/postgres v1.3.10
