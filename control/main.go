@@ -30,9 +30,6 @@ var dsn string
 func init() {
 	// Get DB_Password
 	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		panic(errors.New("couldn't retrieve DB_PASSWORD"))
-	}
 	// Load environmental variables if db password couldn't be obtained
 	if dbPassword == "" {
 		log.Println("[INFO] Couldn't get DB_PASSWORD. Trying to load it in from ../app.env")
@@ -40,6 +37,7 @@ func init() {
 		if err != nil {
 			panic(errors.New("couldn't load environmental variables from ../app.env"))
 		}
+		dbPassword = os.Getenv("DB_PASSWORD")
 	}
 	// Initialize database
 	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",

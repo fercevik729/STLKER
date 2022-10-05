@@ -18,13 +18,16 @@ var apiKey string
 
 func init() {
 	// Load the API_KEY before hand
-	apiKey = os.Getenv("API_Key")
+	apiKey = os.Getenv("API_KEY")
+
+	// If program can't get it from the environment it should try loading it
 	if apiKey == "" {
 		log.Println("[INFO] Couldn't get API_KEY. Trying to load it from ../app.env")
 		err := godotenv.Load("../app.env")
 		if err != nil {
-			panic(errors.New("couldn't load variables from app.env"))
+			panic(errors.New("couldn't load variables from ../app.env"))
 		}
+		apiKey = os.Getenv("API_KEY")
 	}
 
 }
