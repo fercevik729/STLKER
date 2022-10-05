@@ -33,7 +33,7 @@ func init() {
 	if dbPassword == "" {
 		panic(errors.New("couldn't get DB_PASS"))
 	}
-	log.Println("[INFO] DB_PASS is": dbPassword)
+	log.Println("[INFO] DB_PASS is: ", dbPassword)
 	// Initialize database
 	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",
 		dbPassword)
