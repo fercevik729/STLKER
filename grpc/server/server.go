@@ -76,7 +76,6 @@ func (w *WatcherServer) handleUpdates() {
 	}()
 
 	for range ru {
-		w.l.Println("[INFO] Got updated stock information")
 		// Loop over subscribed clients
 		for k, v := range w.subscribedTickers {
 			// loop over subscribed rates
