@@ -62,14 +62,18 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	// Get the stock information
 	s, err := Info(ticker, destCurr, c.client)
 	if err != nil {
-		c.logHTTPError(w, "couldn't get ticker information, ensure ticker and destination currency are valid", http.StatusBadRequest)
+		c.logHTTPError(w, fmt.Sprintf("couldn't get ticker information for ticker %s and destination "+
+			"currency %s: %s", ticker, destCurr, err), http.StatusBadRequest)
 		return
 	}
 	// Write the data to the client
 	w.Header().Set("Content-Type", "application/json")
 	if c.cache != nil {
-		c.l.Println("[INFO] Setting cache...")
-		c.setStockCache(r, &s)
+		c.l.Info("Setting cache...")
+		err := c.setStockCache(r, &s)
+		if err != nil {
+			c.l.Warn(fmt.Sprintf("Got error while setting stock cache: %s", err.Error()))
+		}
 	}
 	data.ToJSON(&Stock{
 		Symbol:        s.Symbol,
@@ -88,7 +92,7 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // swagger:route GET /stocks/more/{ticker} stocks moreInfo
-// Outputs more sophisticated stock informations
+// Outputs more sophisticated stock information
 // responses:
 //
 //	200: moreStockResponse
@@ -107,8 +111,11 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if c.cache != nil {
-		c.setStockCache(r, &co)
-		c.l.Println("[INFO] Setting cache...")
+		err := c.setStockCache(r, &co)
+		if err != nil {
+			c.l.Warn(fmt.Sprintf("Got error while setting stock cache: %s", err.Error()))
+		}
+		c.l.Info("Setting cache...")
 	}
 	data.ToJSON(&MoreStock{
 		Ticker:            co.Ticker,

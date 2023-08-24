@@ -29,7 +29,7 @@ func (c *ControlHandler) setStockCache(r *http.Request, value interface{}) error
 
 // logHTTPError logs the error message for a handler with the specified message and status code
 func (c *ControlHandler) logHTTPError(w http.ResponseWriter, errorMsg string, errorCode int) {
-	c.l.Printf("[ERROR] %s\n", errorMsg)
+	c.l.Error(errorMsg)
 	http.Error(w, fmt.Sprintf("Error: %s", errorMsg), errorCode)
 }
 
@@ -49,20 +49,20 @@ func (c *ControlHandler) updateSecurities(s *Security) {
 	// Get security information using Info method defined in driver.go
 	st, err := Info(s.Ticker, s.Currency, c.client)
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't get info for ticker:", s.Ticker)
+		c.l.Error("Couldn't get info for ticker:", s.Ticker)
 		return
 	}
 	// Parse the stock price
 	price, err := strconv.ParseFloat(st.Price, 64)
 	if err != nil {
-		c.l.Println("[ERROR] Couldn't parse stock price for ticker:", s.Ticker, "price:", st.Price)
+		c.l.Error("Couldn't parse stock price for ticker:", s.Ticker, "price:", st.Price)
 		return
 	}
 	// Set stock price in target currency (USD by default)
 	if s.Currency == "" {
 		s.Currency = "USD"
 	}
-	c.l.Println("[DEBUG] Got price for ticker:", s.Ticker, "in", s.Currency)
+	c.l.Debug("Got price for ticker:", s.Ticker, "in", s.Currency)
 	s.CurrPrice = price
 
 	// Update the individual security's gains and percent changes

@@ -18,11 +18,11 @@ func (c *ControlHandler) Cache(next http.Handler) http.Handler {
 		if strings.Contains(r.RequestURI, "/stocks/more/") {
 			var co d.MoreStock
 			err = c.getFromCache(r.RequestURI, &co, w)
-			c.l.Println("[INFO] Getting from cache...")
+			c.l.Info("Getting from cache...")
 		} else if strings.Contains(r.RequestURI, "/stocks/") {
 			var s d.Stock
 			err = c.getFromCache(r.RequestURI, &s, w)
-			c.l.Println("[INFO] Getting from cache...")
+			c.l.Info("Getting from cache...")
 		}
 
 		// If there was an error retrieving, serve the next handler

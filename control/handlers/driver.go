@@ -45,7 +45,7 @@ func Info(ticker, destination string, client pb.WatcherClient) (*data.Stock, err
 	}, nil
 }
 
-// MoreInfo returns a pointer to a MoreStock struct and an error if one arises
+// CompanyOverview returns a pointer to a MoreStock struct and an error if one arises
 func CompanyOverview(ticker string, client pb.WatcherClient) (*data.MoreStock, error) {
 	if len(ticker) > 5 {
 		return nil, fmt.Errorf("ticker symbol is too long")

@@ -8,7 +8,8 @@ import (
 
 	"github.com/fercevik729/STLKER/grpc/data"
 	pb "github.com/fercevik729/STLKER/grpc/protos"
-	server "github.com/fercevik729/STLKER/grpc/server"
+	"github.com/fercevik729/STLKER/grpc/server"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -16,14 +17,18 @@ import (
 var apiKey string
 
 func init() {
-	// Load the API_KEY before hand
+	// Load env vars
+	err := godotenv.Load("../app.env")
+	if err != nil {
+		log.Fatal(errors.New("couldn't load app.env"))
+	}
+	// Load the API_KEY beforehand
 	apiKey = os.Getenv("API_KEY")
 
 	// Panic if it can't
 	if apiKey == "" {
-		panic(errors.New("couldn't get API_KEY"))
+		log.Fatal(errors.New("couldn't get API_KEY"))
 	}
-	log.Println("[INFO] API_KEY is:", apiKey)
 
 }
 

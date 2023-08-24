@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/go-redis/cache/v8"
@@ -12,14 +12,14 @@ import (
 
 // ControlHandler is a http.Handler
 type ControlHandler struct {
-	l      *log.Logger
+	l      *slog.Logger
 	client pb.WatcherClient
 	cache  *cache.Cache
 	dsn    string
 }
 
 // NewControlHandler is a constructor
-func NewControlHandler(log *log.Logger, wc pb.WatcherClient, rOptions *redis.Ring, dsn string) *ControlHandler {
+func NewControlHandler(log *slog.Logger, wc pb.WatcherClient, rOptions *redis.Ring, dsn string) *ControlHandler {
 	// Check if redis options were presented
 	var c *cache.Cache
 	if rOptions != nil {

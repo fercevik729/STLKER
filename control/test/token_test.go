@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +22,7 @@ func TestSignUp(t *testing.T) {
 	}
 	// Create http recorder
 	rr := httptest.NewRecorder()
-	control := handlers.NewControlHandler(log.Default(), nil, nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), nil, nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.SignUp)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusCreated {
@@ -56,9 +56,9 @@ func TestDeleteUser(t *testing.T) {
 	req.Header.Add("Authorization", tokens["Access-Token"])
 	// Create http recorder
 	rr := httptest.NewRecorder()
-	control := handlers.NewControlHandler(log.Default(), nil, nil, "../database/stlker.db")
-	delete := http.HandlerFunc(control.DeleteUser)
-	handler := handlers.Authenticate(delete)
+	control := handlers.NewControlHandler(slog.Default(), nil, nil, "../database/stlker.db")
+	deleteFunc := http.HandlerFunc(control.DeleteUser)
+	handler := handlers.Authenticate(deleteFunc)
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -68,7 +68,7 @@ func TestDeleteUser(t *testing.T) {
 
 }
 
-// login is a helper function to login a mock user
+// login is a helper function to log in a mock user
 // it returns a map[string]string containing access and refresh tokens as well as the user name
 // it also returns an error if at some point it was unsuccessful
 func login() (map[string]string, error) {
@@ -80,7 +80,7 @@ func login() (map[string]string, error) {
 	}
 	// Create http recorder
 	rr := httptest.NewRecorder()
-	control := handlers.NewControlHandler(log.Default(), nil, nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), nil, nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.LogIn)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {

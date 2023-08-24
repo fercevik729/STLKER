@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 
@@ -36,7 +37,7 @@ func getMockStock(ticker, currency string) (*data.Stock, int, error) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.GetInfo)
 	handler.ServeHTTP(rr, req)
 
@@ -50,14 +51,17 @@ func getMockStock(ticker, currency string) (*data.Stock, int, error) {
 // Logins in a mock user and returns the request with the token as a http cookie
 func loginMockUser(r *http.Request) (*http.Request, error) {
 
-	// Get token from /login endroute
+	// Get token from /login end route
 	// Create request
 	mockBody := handlers.User{
 		Username: mockUser,
 		Password: mockPass,
 	}
 	var buf bytes.Buffer
-	data.ToJSON(mockBody, &buf)
+	err := data.ToJSON(mockBody, &buf)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("POST", "/login", &buf)
 	if err != nil {
@@ -67,7 +71,7 @@ func loginMockUser(r *http.Request) (*http.Request, error) {
 
 	rr := httptest.NewRecorder()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), nil, nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), nil, nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.LogIn)
 	handler.ServeHTTP(rr, req)
 
