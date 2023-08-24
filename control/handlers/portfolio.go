@@ -81,11 +81,11 @@ type Profits struct {
 
 func (p *Portfolio) calcProfits() (*Profits, error) {
 	original := 0.
-	new := 0.
+	newProfits := 0.
 	// Iterate over securities and calculate change and percent change
 	for _, sec := range p.Securities {
 		original += sec.BoughtPrice * sec.Shares
-		new += sec.CurrPrice * sec.Shares
+		newProfits += sec.CurrPrice * sec.Shares
 	}
 
 	// Round original and new
@@ -95,15 +95,15 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 		return nil, err
 	}
 
-	new, err = strconv.ParseFloat(fmt.Sprintf("%.2f", new), 64)
+	newProfits, err = strconv.ParseFloat(fmt.Sprintf("%.2f", newProfits), 64)
 	if err != nil {
 		return nil, err
 	}
 
 	// Compute and round change and profits
-	percChange := fmt.Sprintf("%.2f%%", (new-original)/original*100)
+	percChange := fmt.Sprintf("%.2f%%", (newProfits-original)/original*100)
 
-	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", (new-original)), 64)
+	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", newProfits-original), 64)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 	return &Profits{
 		Name:          p.Name,
 		OriginalValue: original,
-		NewValue:      new,
+		NewValue:      newProfits,
 		Moves:         p.Securities,
 		NetGain:       netGain,
 		NetChange:     percChange,
@@ -160,13 +160,13 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// Retrieve prices for all stocks in the portfolio
-	c.l.Println("[INFO] Retrieving updated stock prices")
+	c.l.Info("Retrieving updated stock prices")
 	c.updatePrices(&reqPort)
 
 	// Create portfolio entry
 	db.Debug().Create(&reqPort)
 	msg = fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
-	c.l.Printf("[DEBUG] %s", msg)
+	c.l.Debug(msg)
 
 	// Write to response body
 	w.WriteHeader(http.StatusCreated)
@@ -198,8 +198,8 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	// Then return in an ordered format
 	if isAdmin {
 		var (
-			usernames []string
-			portnames []string
+			usernames      []string
+			portfolioNames []string
 		)
 		if err != nil {
 			c.logHTTPError(w, "Couldn't open user's database", http.StatusInternalServerError)
@@ -213,8 +213,8 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 		// Iterate ove all users
 		for _, user := range usernames {
-			db.Table("portfolios").Where("username=?", user).Select("name").Find(&portnames)
-			table[user] = portnames
+			db.Table("portfolios").Where("username=?", user).Select("name").Find(&portfolioNames)
+			table[user] = portfolioNames
 		}
 		// Return the table in json format
 		data.ToJSON(table, w)
@@ -241,7 +241,7 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 // swagger:route GET /portfolios/{name} portfolios getPortfolio
-// Outputs a particulare portfolio for a user
+// Outputs a particular portfolio for a user
 // responses:
 //
 //	200: profitResponse

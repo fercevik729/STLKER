@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"bytes"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,7 +38,7 @@ func TestCreatePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.CreatePortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusCreated {
@@ -75,12 +76,16 @@ func TestGetPortfolio(t *testing.T) {
 	// Dial gRPC server
 	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Println("[ERROR] dialing gRPC server")
-		panic(err)
+		log.Fatalln("[ERROR] dialing gRPC server")
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+
+		}
+	}(conn)
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.GetPortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -120,7 +125,7 @@ func TestUpdatePortfolio(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.UpdatePortfolio)
 	handler.ServeHTTP(rr, req)
 	// Check status
@@ -159,12 +164,16 @@ func TestDeletePortfolio(t *testing.T) {
 	// Dial gRPC server
 	conn, err := grpc.Dial(":9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Println("[ERROR] dialing gRPC server")
-		panic(err)
+		log.Fatalln("[ERROR] dialing gRPC server")
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+
+		}
+	}(conn)
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.DeletePortfolio)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {

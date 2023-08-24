@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,17 +32,17 @@ type Claims struct {
 func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	// Destruct incoming request payload
 	var (
-		creds     User
-		otherUser User
-		err       error
+		credentials User
+		otherUser   User
+		err         error
 	)
-	data.FromJSON(&creds, r.Body)
+	data.FromJSON(&credentials, r.Body)
 	// If the credentials are empty don't sign them up
-	if creds.Username == "" || creds.Password == "" {
+	if credentials.Username == "" || credentials.Password == "" {
 		c.logHTTPError(w, "email and password cannot be empty", http.StatusBadRequest)
 		return
 	}
-	ok, msg := validateUser(creds)
+	ok, msg := validateUser(credentials)
 	if !ok {
 		c.logHTTPError(w, msg, http.StatusBadRequest)
 		return
@@ -54,28 +55,28 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check to see if there are other users with that username
-	db.Where("username=?", creds.Username).First(&otherUser)
+	db.Where("username=?", credentials.Username).First(&otherUser)
 	if !reflect.DeepEqual(otherUser, User{}) {
 		c.logHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
 		return
 	}
 
 	// Encrypt the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.logHTTPError(w, "couldn't encrypt password", http.StatusInternalServerError)
 		return
 	}
 	// Assign credential to this hash
-	creds.Password = string(hash)
+	credentials.Password = string(hash)
 
 	// Add credentials to database
-	db.Model(&User{}).Create(&creds)
+	db.Model(&User{}).Create(&credentials)
 
 	// Status code to indicate successfully created user
 	w.WriteHeader(http.StatusCreated)
-	c.l.Println("[INFO] Signed up user:", creds.Username)
-	data.ToJSON(fmt.Sprintf("Happy Investing! %s", creds.Username), w)
+	c.l.Info("Signed up user:", credentials.Username)
+	data.ToJSON(fmt.Sprintf("Happy Investing! %s", credentials.Username), w)
 
 }
 
@@ -114,7 +115,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	if usr.Username == "admin" {
 		admin = true
 	}
-	c.l.Println("[INFO] Logged in user:", usr.Username)
+	c.l.Info("Logged in user:", usr.Username)
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
@@ -163,7 +164,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
 	})
-	resp := make(map[string]string, 0)
+	resp := make(map[string]string)
 	resp["User"] = dbUsr.Username
 	resp["Access-Token"] = tokenStr
 	resp["Refresh-Token"] = rfTokenStr
@@ -182,7 +183,7 @@ func (c *ControlHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		Name:   "Refresh-Token",
 		MaxAge: -1,
 	})
-	c.l.Println("[INFO] Logged out user:", retrieveUsername(r))
+	c.l.Info("Logged out user:", retrieveUsername(r))
 
 }
 
@@ -230,10 +231,10 @@ func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	user := retrieveUsername(r)
 	var deletedUser User
 	db.Model(User{}).Where("username=?", user).Delete(&deletedUser)
-	c.l.Println("[INFO] Deleted User", user)
+	c.l.Info("Deleted User", user)
 }
 
-// ValidateJWT checks if the JWT token in the request token is valid and returns an http status
+// ValidateJWT checks if the JWT token in the request token is valid and returns a http status
 // code depending on if it is, along with a pointer to a claim struct
 func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	var tknStr string
@@ -242,9 +243,9 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	// If there was no token in the header check the cookies
 	if tknStr == "" {
 		cookie, err := r.Cookie(tokenName)
-		switch err {
-		case nil:
-		case http.ErrNoCookie:
+		switch {
+		case err == nil:
+		case errors.Is(err, http.ErrNoCookie):
 			return http.StatusUnauthorized, nil
 		default:
 			return http.StatusBadRequest, nil
@@ -257,9 +258,9 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 		return []byte(encryptKey), nil
 	})
 
-	switch err {
-	case nil:
-	case jwt.ErrSignatureInvalid:
+	switch {
+	case err == nil:
+	case errors.Is(err, jwt.ErrSignatureInvalid):
 		return http.StatusUnauthorized, nil
 	default:
 		return http.StatusBadRequest, nil

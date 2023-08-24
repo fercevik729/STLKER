@@ -18,7 +18,7 @@ func (c *ControlHandler) Logger(next http.Handler) http.Handler {
 		} else if username != "" {
 			logMsg += fmt.Sprint(" for user:", username)
 		}
-		c.l.Println(logMsg)
+		c.l.Info(logMsg)
 		next.ServeHTTP(w, r)
 	})
 }

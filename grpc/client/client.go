@@ -25,7 +25,12 @@ func main() {
 	if err != nil {
 		log.Fatalln("Couldn't connect to gRPC server", err)
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			log.Fatalln("Couldn't close gRPC client connection")
+		}
+	}(conn)
 
 	client := pb.NewWatcherClient(conn)
 	GetInfo(client)

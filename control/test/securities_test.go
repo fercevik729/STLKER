@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"bytes"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -45,7 +46,7 @@ func TestCreateSecurity(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.CreateSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusCreated {
@@ -85,7 +86,7 @@ func TestReadSecurity(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.ReadSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -125,7 +126,7 @@ func TestUpdateSecurity1(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.UpdateSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -165,7 +166,7 @@ func TestReadSecurity2(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.ReadSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
@@ -205,7 +206,7 @@ func TestUpdateSecurity2(t *testing.T) {
 	}
 	defer conn.Close()
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.UpdateSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusCreated {
@@ -242,9 +243,14 @@ func TestReadSecurity3(t *testing.T) {
 		log.Println("[ERROR] dialing gRPC server")
 		panic(err)
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(conn)
 	// Create a handler to listen for incoming requests
-	control := handlers.NewControlHandler(log.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
+	control := handlers.NewControlHandler(slog.Default(), protos.NewWatcherClient(conn), nil, "../database/stlker.db")
 	handler := http.HandlerFunc(control.ReadSecurity)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {

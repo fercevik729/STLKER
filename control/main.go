@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/joho/godotenv"
+	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,46 +28,120 @@ import (
 	"gorm.io/gorm"
 )
 
+// TODO: change localhost to names of containers when dockerizing
 var ring *redis.Ring
 var dsn string
 
+type PrettyHandlerOptions struct {
+	SlogOpts slog.HandlerOptions
+}
+
+type PrettyHandler struct {
+	slog.Handler
+	l *log.Logger
+}
+
+func (h *PrettyHandler) Handle(ctx context.Context, r slog.Record) error {
+	level := r.Level.String() + ":"
+
+	// Colorize the level output
+	switch r.Level {
+	case slog.LevelDebug:
+		level = color.MagentaString(level)
+	case slog.LevelInfo:
+		level = color.BlueString(level)
+	case slog.LevelWarn:
+		level = color.YellowString(level)
+	case slog.LevelError:
+		level = color.RedString(level)
+	}
+
+	// Gather the fields
+	fields := make(map[string]interface{}, r.NumAttrs())
+	r.Attrs(func(a slog.Attr) bool {
+		fields[a.Key] = a.Value.Any()
+		return true
+	})
+	//Marshal the fields for JSON output
+	b, err := json.MarshalIndent(fields, "", " ")
+	if err != nil {
+		return err
+	}
+	timeStr := r.Time.Format("[15:05:05.000]")
+	msg := color.CyanString(r.Message)
+
+	h.l.Println(timeStr, level, msg, color.WhiteString(string(b)))
+
+	return nil
+}
+
+// NewPrettyHandler constructs a new PrettyHandler struct and returns a pointer to it
+func NewPrettyHandler(
+	out io.Writer,
+	opts PrettyHandlerOptions) *PrettyHandler {
+	h := &PrettyHandler{
+		Handler: slog.NewTextHandler(out, &opts.SlogOpts),
+		l:       log.New(out, "control", 0),
+	}
+	return h
+}
+
 func init() {
 	// Get DB_Password
-	dbPassword := os.Getenv("DB_PASS")
+	err := godotenv.Load("../app.env")
+	if err != nil {
+		log.Println("[WARN] Couldn't load env vars from ../app.env")
+	}
+	dbPassword := os.Getenv("DB_PASSWORD")
 	// Panic if it can't
 	if dbPassword == "" {
-		panic(errors.New("couldn't get DB_PASS"))
+		log.Fatalln(errors.New("couldn't get DB_PASSWORD"))
 	}
-	log.Println("[INFO] DB_PASS is: ", dbPassword)
 	// Initialize database
-	dsn = fmt.Sprintf("postgres://postgres:%v@db:5432/stlker?sslmode=disable",
+	dsn = fmt.Sprintf("host=localhost user=furkanercevik password=%v dbname=stlker port=5432 sslmode=disable",
 		dbPassword)
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		log.Fatalln(errors.New("couldn't create connection to database"))
 	}
 	// Migrate the schemas
-	db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
+	err = db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
+	if err != nil {
+		log.Fatalln(errors.New("couldn't migrate schemas"))
+	}
 
 	// Initialize redis options
 	ring = redis.NewRing(&redis.RingOptions{
 		Addrs: map[string]string{
-			"server1": "redis:6379",
+			"server1": "localhost:6379",
 		},
 	})
 
 }
 
 func main() {
-	l := log.New(os.Stdout, "control", log.LstdFlags)
+	// Init zap logger
+	opts := PrettyHandlerOptions{
+		SlogOpts: slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+	handler := NewPrettyHandler(os.Stderr, opts)
+	l := slog.New(handler)
 
 	// Dial gRPC server
-	conn, err := grpc.Dial("grpc:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("localhost:9090", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		l.Println("[ERROR] dialing gRPC server")
-		panic(err)
+		l.Error(fmt.Sprintf("Couldn't dial gRPC server: %s", err))
+		return
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}(conn)
 	// Create watcher client
 	wc := p.NewWatcherClient(conn)
 	// Create serve mux
@@ -78,17 +157,16 @@ func main() {
 	s := &http.Server{
 		Addr:         "0.0.0.0:8080",
 		Handler:      ch(sm),
-		ErrorLog:     l,
 		IdleTimeout:  5 * time.Second,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 120 * time.Second,
 	}
 	go func() {
-		l.Println("[DEBUG] Starting control on port 8080")
+		l.Debug("Starting control on port 8080")
 
 		err := s.ListenAndServe()
 		if err != nil {
-			l.Println("[ERROR] starting server", err)
+			l.Error("unable to start server", err)
 			return
 		}
 	}()
@@ -99,20 +177,20 @@ func main() {
 
 	// Blocks until it can read from signal channel
 	sig := <-sigChan
-	l.Println("Receieved terminate, graceful shutdown", sig)
+	l.Info("Received terminate, graceful shutdown", "sig", sig)
 	tc, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 
 	defer cancel()
 	err = s.Shutdown(tc)
 	if err != nil {
-		l.Println("Tried shutting down, but got this error:", err)
+		l.Warn("Tried shutting down, but got this", "err", err)
 	}
 
 }
 
 func registerRoutes(sm *mux.Router, control *handlers.ControlHandler) {
 	sm.Use(control.Logger)
-	// Create subrouters and register handlers
+	// Create sub-routers and register handlers
 	getR := sm.Methods(http.MethodGet).Subrouter()
 	getR.HandleFunc("/portfolios/{name}", control.GetPortfolio)
 	getR.HandleFunc("/portfolios", control.GetAll)

@@ -30,7 +30,7 @@ type ReqSecurity struct {
 	Shares float64 `json:"Shares"`
 }
 
-// Product defines the structure for an API product
+// Security defines the structure for a security
 // swagger:model
 type Security struct {
 	// swagger: ignore
@@ -146,7 +146,7 @@ func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Update the security
 	c.updateSecurities(&security)
 
-	// Write to responsewriter
+	// Write to response writer
 	data.ToJSON(&security, w)
 }
 
