@@ -36,11 +36,14 @@ type PrettyHandlerOptions struct {
 	SlogOpts slog.HandlerOptions
 }
 
+// PrettyHandler is a custom structured logging handler
+// that enables pretty and colorized output
 type PrettyHandler struct {
 	slog.Handler
 	l *log.Logger
 }
 
+// Handle defines how log messages are printed using PrettyHandler
 func (h *PrettyHandler) Handle(ctx context.Context, r slog.Record) error {
 	level := r.Level.String() + ":"
 

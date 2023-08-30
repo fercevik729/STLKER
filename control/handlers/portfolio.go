@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fercevik729/STLKER/control/data"
 	"github.com/gorilla/mux"
+
+	"github.com/fercevik729/STLKER/control/data"
 )
 
 type Username struct{}
@@ -27,9 +28,9 @@ type ResponseMessage struct {
 
 type STLKERModel struct {
 	ID        uint         `gorm:"primaryKey" json:"-"`
-	CreatedAt time.Time    `json:"-"`
-	UpdatedAt time.Time    `json:"-"`
-	DeletedAt sql.NullTime `json:"-" gorm:"index"`
+	CreatedAt time.Time    `                  json:"-"`
+	UpdatedAt time.Time    `                  json:"-"`
+	DeletedAt sql.NullTime `gorm:"index"      json:"-"`
 }
 
 // swagger:parameters createPortfolio updatePortfolio
@@ -60,7 +61,7 @@ type Portfolio struct {
 	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
 }
 
-// A Profits struct defines the structure for the profits of an API portfoli
+// A Profits struct defines the structure for the profits of an API portfolio
 // swagger:model
 type Profits struct {
 	// portfolio name
@@ -141,7 +142,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	username := retrieveUsername(r)
 	reqPort.Username = username
 
-	// Open sqlite db connection
+	// Open db connection
 	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
@@ -173,7 +174,6 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	data.ToJSON(&ResponseMessage{
 		Msg: msg,
 	}, w)
-
 }
 
 // swagger:route GET /portfolios portfolios getPortfolios
@@ -230,14 +230,17 @@ func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	for i := range ports {
 		prof, err := ports[i].calcProfits()
 		if err != nil {
-			c.logHTTPError(w, fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name), http.StatusInternalServerError)
+			c.logHTTPError(
+				w,
+				fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name),
+				http.StatusInternalServerError,
+			)
 			return
 		}
 		profits = append(profits, prof)
 	}
 
 	data.ToJSON(profits, w)
-
 }
 
 // swagger:route GET /portfolios/{name} portfolios getPortfolio
@@ -252,7 +255,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 
-	// Open sqlite db connection
+	// Open db connection
 	db, err := newGormDBConn(c.dsn)
 	if err != nil {
 		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
@@ -264,7 +267,11 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	db.Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
 	// Check if any results were found
 	if port.ID == 0 {
-		c.logHTTPError(w, fmt.Sprintf("no results found with name %s, and user %s", name, username), http.StatusBadRequest)
+		c.logHTTPError(
+			w,
+			fmt.Sprintf("no results found with name %s, and user %s", name, username),
+			http.StatusBadRequest,
+		)
 		return
 	}
 	// Update the database entry with the new prices
@@ -280,7 +287,6 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.ToJSON(profits, w)
-
 }
 
 // swagger:route PUT /portfolios portfolios updatePortfolio
@@ -317,7 +323,6 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	data.ToJSON(&ResponseMessage{
 		Msg: msg,
 	}, w)
-
 }
 
 // swagger:route DELETE /portfolios/{name} portfolios deletePortfolio
