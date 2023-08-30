@@ -1,6 +1,6 @@
 // Package classification of STLKER API
 //
-// Documentation for STLKER API
+// # Documentation for STLKER API
 //
 // Schemes: http
 // BasePath: /
@@ -14,12 +14,14 @@
 // swagger:meta
 package handlers
 
+import m "github.com/fercevik729/STLKER/control/models"
+
 // A profits is a list of profits for each of the portfolios returned to the client
 // swagger:response profitsResponse
 type profitsResponseWrapper struct {
 	// Profits for all portfolios for a user
 	// in: body
-	Body []Profits
+	Body []m.Profits
 }
 
 // A profitResponse is a single portfolio returned to the client
@@ -27,7 +29,7 @@ type profitsResponseWrapper struct {
 type profitResponseWrapper struct {
 	// A single portfolio's profits
 	// in: body
-	Body Profits
+	Body m.Profits
 }
 
 // A securityResponse is a single security's information returned to the client
@@ -35,7 +37,7 @@ type profitResponseWrapper struct {
 type securityResponseWrapper struct {
 	// A single security
 	// in: body
-	Body Security
+	Body m.Security
 }
 
 // A stockResponse is information about a single stock returned to the client

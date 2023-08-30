@@ -9,18 +9,12 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/control/data"
+	m "github.com/fercevik729/STLKER/control/models"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
-var encryptKey string = os.Getenv("KEY")
-
-type User struct {
-	gorm.Model
-	Username string `json:"Username"`
-	Password string `json:"Password"`
-}
+var encryptKey = os.Getenv("KEY")
 
 type Claims struct {
 	Name  string `json:"Name"`
@@ -32,8 +26,8 @@ type Claims struct {
 func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	// Destruct incoming request payload
 	var (
-		credentials User
-		otherUser   User
+		credentials m.User
+		otherUser   m.User
 		err         error
 	)
 	data.FromJSON(&credentials, r.Body)
@@ -47,16 +41,8 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		c.logHTTPError(w, msg, http.StatusBadRequest)
 		return
 	}
-	// Create database connection
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-
-	// Check to see if there are other users with that username
-	db.Where("username=?", credentials.Username).First(&otherUser)
-	if !reflect.DeepEqual(otherUser, User{}) {
+	otherUser = c.userRepo.GetUser(credentials.Username)
+	if !reflect.DeepEqual(otherUser, m.User{}) {
 		c.logHTTPError(w, "a user with that username already exists", http.StatusBadRequest)
 		return
 	}
@@ -71,7 +57,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	credentials.Password = string(hash)
 
 	// Add credentials to database
-	db.Model(&User{}).Create(&credentials)
+	c.userRepo.CreateUser(credentials)
 
 	// Status code to indicate successfully created user
 	w.WriteHeader(http.StatusCreated)
@@ -84,29 +70,21 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	// Destructure incoming request payload
 	var (
-		usr   User
-		dbUsr User
+		usr   m.User
 		admin bool
 	)
 	data.FromJSON(&usr, r.Body)
 
 	// If the user object is empty it was a bad request
-	if usr == (User{}) {
+	if usr == (m.User{}) {
 		c.logHTTPError(w, "Must provide username and password", http.StatusBadRequest)
 		return
 	}
-	// Connect to database
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-
 	// Find credentials for the email from db
-	db.Model(&User{}).Where("username=?", usr.Username).Find(&dbUsr)
+	dbUsr := c.userRepo.GetUser(usr.Username)
 
 	// Compare the hashes
-	err = bcrypt.CompareHashAndPassword([]byte(dbUsr.Password), []byte(usr.Password))
+	err := bcrypt.CompareHashAndPassword([]byte(dbUsr.Password), []byte(usr.Password))
 	if err != nil {
 		c.logHTTPError(w, "passwords do not match", http.StatusUnauthorized)
 		return
@@ -222,16 +200,11 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// DeleteUser deletes the user from
 func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-	user := retrieveUsername(r)
-	var deletedUser User
-	db.Model(User{}).Where("username=?", user).Delete(&deletedUser)
-	c.l.Info("Deleted User", user)
+	username := retrieveUsername(r)
+	c.userRepo.DeleteUser(username)
+	c.l.Info("Deleted User", username)
 }
 
 // ValidateJWT checks if the JWT token in the request token is valid and returns a http status

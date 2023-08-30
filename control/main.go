@@ -6,7 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/fercevik729/STLKER/control/models"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"log/slog"
@@ -17,6 +20,7 @@ import (
 	"time"
 
 	"github.com/fercevik729/STLKER/control/handlers"
+	r "github.com/fercevik729/STLKER/control/repository"
 	p "github.com/fercevik729/STLKER/grpc/protos"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-redis/redis/v8"
@@ -24,13 +28,13 @@ import (
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 // TODO: change localhost to names of containers when dockerizing
 var ring *redis.Ring
-var dsn string
+var portRepo *r.PortfolioRepository
+var secRepo *r.SecurityRepository
+var userRepo *r.UserRepository
 
 type PrettyHandlerOptions struct {
 	SlogOpts slog.HandlerOptions
@@ -101,18 +105,21 @@ func init() {
 		log.Fatalln(errors.New("couldn't get DB_PASSWORD"))
 	}
 	// Initialize database
-	dsn = fmt.Sprintf("host=localhost user=furkanercevik password=%v dbname=stlker port=5432 sslmode=disable",
+	dsn := fmt.Sprintf("host=localhost user=furkanercevik password=%v dbname=stlker port=5432 sslmode=disable",
 		dbPassword)
 
+	// Open connection
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalln(errors.New("couldn't create connection to database"))
+		log.Fatalln(err)
 	}
-	// Migrate the schemas
-	err = db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
-	if err != nil {
-		log.Fatalln(errors.New("couldn't migrate schemas"))
-	}
+	// Init the schemas
+	err = db.AutoMigrate(&models.Portfolio{}, &models.Security{}, &models.User{})
+
+	// Create repos
+	portRepo = r.NewPortfolioRepository(db)
+	secRepo = r.NewSecurityRepository(db)
+	userRepo = r.NewUserRepository(db)
 
 	// Initialize redis options
 	ring = redis.NewRing(&redis.RingOptions{
@@ -124,7 +131,7 @@ func init() {
 }
 
 func main() {
-	// Init zap logger
+	// Init pretty logger
 	opts := PrettyHandlerOptions{
 		SlogOpts: slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -150,7 +157,7 @@ func main() {
 	// Create serve mux
 	sm := mux.NewRouter()
 	// Create handlers
-	control := handlers.NewControlHandler(l, wc, ring, dsn)
+	control := handlers.NewControlHandler(l, wc, ring, portRepo, secRepo, userRepo)
 	// Register routes
 	registerRoutes(sm, control)
 	// CORS for UI (maybe)

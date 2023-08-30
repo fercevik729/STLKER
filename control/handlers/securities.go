@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	m "github.com/fercevik729/STLKER/control/models"
+	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 
@@ -21,79 +23,45 @@ type ReqSecurity struct {
 	// ticker of the security
 	//
 	// required: true
-	// example: BYND
+	// example: AAPL
 	Ticker string `json:"Ticker"`
 	// number of shares of the security
 	//
 	// required: true
-	// example: BYND
+	// example: 5.32
 	Shares float64 `json:"Shares"`
 }
 
-// Security defines the structure for a security
-// swagger:model
-type Security struct {
-	// swagger: ignore
-	STLKERModel
-	// swagger: ignore
-	SecurityID int `gorm:"primary_key" json:"-"`
-	// ticker of the security
-	Ticker      string  `json:"Ticker"`
-	BoughtPrice float64 `json:"Bought Price"`
-	CurrPrice   float64 `json:"Current Price"`
-	Shares      float64 `json:"Shares"`
-	Gain        float64 `json:"Gain"`
-	Change      string  `json:"Percent Change"`
-	// Currency is the destination currency of the stock
-	Currency string `json:"Currency" gorm:"default:USD"`
-	// Foreign key
-	// swagger: ignore
-	PortfolioID uint `json:"-"`
-}
-
-// setMoves sets the gain and change variables of s to the new parameters
-func (s *Security) setMoves(gain float64, change string) {
-	s.Gain = gain
-	s.Change = change
-}
-
-func (c *ControlHandler) newSecurity(params ReqSecurity, w http.ResponseWriter, portName string, username string) {
+// convertSecurity converts a ReqSecurity struct to a Security struct
+func (c *ControlHandler) convertSecurity(params ReqSecurity, portName string, username string) (m.Security, error) {
 	ticker := params.Ticker
 	shares := params.Shares
 
-	// Create sql db instance
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
 	// Get portfolio id
-	portId := getPortfolioId(db, portName, username)
+	portId := c.portRepo.GetPortfolioId(portName, username)
 	if portId == 0 {
-		c.logHTTPError(w, fmt.Sprintf("Couldn't get updated price for %s", portName), http.StatusBadRequest)
-		return
+		return m.Security{}, errors.Errorf("Couldn't get portfolio %s", portName)
 	}
-	// Get stock info
+
+	// Get stock info from gRPC service
 	stock, err := Info(ticker, "USD", c.client)
 	if err != nil {
-		c.logHTTPError(w, fmt.Sprintf("Couldn't get updated price for %s", ticker), http.StatusBadRequest)
-		return
+		return m.Security{}, errors.Errorf("Couldn't get updated price for %s", ticker)
 	}
+	// Get the price
 	price, _ := strconv.ParseFloat(stock.Price, 64)
+
 	// Create the security struct
-	newSecurity := Security{
+	newSecurity := m.Security{
 		Ticker:      ticker,
 		BoughtPrice: price,
 		CurrPrice:   price,
 		Shares:      shares,
 		Currency:    "USD",
-		PortfolioID: uint(portId),
+		PortfolioID: portId,
 	}
-	db.Debug().Create(&newSecurity)
-	w.WriteHeader(http.StatusCreated)
-	data.ToJSON(&ResponseMessage{
-		Msg: fmt.Sprintf("Created %s security with %.2f shares for portfolio %s", ticker, shares, portName),
-	}, w)
+
+	return newSecurity, nil
 }
 
 // swagger:route POST /portfolios/{name} securities createSecurity
@@ -117,7 +85,21 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	c.newSecurity(params, w, portName, username)
+	// Convert from DTO -> DAO
+	security, err := c.convertSecurity(params, portName, username)
+	if err != nil {
+		c.logHTTPError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	portId, ticker := security.PortfolioID, security.Ticker
+	// Security already exists
+	if exists := c.secRepo.Exists(portId, ticker); exists {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	c.secRepo.CreateSecurity(security)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // swagger:route GET /portfolios/{name}/{ticker} securities readSecurity
@@ -130,23 +112,19 @@ func (c *ControlHandler) CreateSecurity(w http.ResponseWriter, r *http.Request) 
 func (c *ControlHandler) ReadSecurity(w http.ResponseWriter, r *http.Request) {
 	// Get URI vars
 	portName, ticker, username := retrieveSecurityVars(r)
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
 	// Get portfolio_id
-	portId := getPortfolioId(db, portName, username)
+	portId := c.portRepo.GetPortfolioId(portName, username)
 	if portId == 0 {
 		c.logHTTPError(w, fmt.Sprintf("Couldn't get updated price for %s", portName), http.StatusBadRequest)
 		return
 	}
-	var security Security
-	db.Model(&Security{}).Select([]string{"ticker", "bought_price", "curr_price", "shares", "gain", "change"}).Where("ticker=?", ticker).Where("portfolio_id=?", portId).First(&security)
+	// Get the security from the database
+	security := c.secRepo.GetSecurity(portId, ticker)
+
 	// Update the security
 	c.updateSecurities(&security)
 
-	// Write to response writer
+	// Write it to the response
 	data.ToJSON(&security, w)
 }
 
@@ -161,39 +139,26 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 	// Get request vars
 	portName := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
-	var sd ReqSecurity
-	data.FromJSON(&sd, r.Body)
+	var params ReqSecurity
+	data.FromJSON(&params, r.Body)
 
-	// Check if the payload is empty
-	if sd == (ReqSecurity{}) {
-		c.logHTTPError(w, "Bad request payload", http.StatusBadRequest)
-		return
-	}
-
-	// Create sql db instance
-	db, err := newGormDBConn(c.dsn)
+	// Convert from DTO to DAO
+	security, err := c.convertSecurity(params, portName, username)
 	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
+		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-	// Get portfolio id
-	portId := getPortfolioId(db, portName, username)
-	if portId == 0 {
-		c.logHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
-		return
-	}
-	// Update the portfolio
-	// Create the new security if a security with that ticker doesn't already exist
-	var res Security
-	db.Model(&res).Where("portfolio_id=?", portId).Where("ticker=?", sd.Ticker).Update("shares", sd.Shares)
-	if res.Ticker == "" {
-		c.newSecurity(sd, w, portName, username)
-	} else {
-		data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Updated security with ticker %s", sd.Ticker)},
-			w,
-		)
 	}
 
+	// Security doesn't exist so create it
+	portId, ticker := security.PortfolioID, security.Ticker
+	if exists := c.secRepo.Exists(portId, ticker); !exists {
+		c.secRepo.CreateSecurity(security)
+		w.WriteHeader(http.StatusCreated)
+		return
+	}
+
+	// Update the portfolio
+	c.secRepo.UpdateSecurity(security)
 }
 
 // swagger:route DELETE /portfolios/{name}/{ticker} securities deleteSecurity
@@ -205,21 +170,14 @@ func (c *ControlHandler) UpdateSecurity(w http.ResponseWriter, r *http.Request) 
 //	500: errorResponse
 func (c *ControlHandler) DeleteSecurity(w http.ResponseWriter, r *http.Request) {
 	portName, ticker, username := retrieveSecurityVars(r)
-	// Connect to database
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
 	// Get portfolio with the name specified by the mux variable
-	portId := getPortfolioId(db, portName, username)
+	portId := c.portRepo.GetPortfolioId(portName, username)
 	if portId == 0 {
 		c.logHTTPError(w, fmt.Sprintf("Couldn't get portfolio id for name: %s", portName), http.StatusBadRequest)
 		return
 	}
 	// Delete the security if it could be found and update database entry
-	var s Security
-	db.Model(&Security{}).Where("ticker=?", ticker).Where("portfolio_id=?", portId).Delete(&s)
+	c.secRepo.DeleteSecurity(ticker, portId)
 
 	// Write to the response writer
 	data.ToJSON(ResponseMessage{Msg: fmt.Sprintf("Deleted security of ticker %s", ticker)}, w)

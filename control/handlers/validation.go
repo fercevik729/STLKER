@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	m "github.com/fercevik729/STLKER/control/models"
 	"regexp"
 	"strings"
 )
 
 // validatePortfolio validates a portfolio's name
-func validatePortfolio(port *Portfolio) (bool, string) {
+func validatePortfolio(port *m.Portfolio) (bool, string) {
 	// Check the length of the name and if it contains spaces
 	if len(port.Name) < 3 || len(port.Name) > 30 || strings.Contains(port.Name, " ") {
 		return false, "Name must be between 3 and 30 characters and cannot contain spaces"
@@ -19,7 +20,7 @@ func validatePortfolio(port *Portfolio) (bool, string) {
 }
 
 // validateUser validates a user's name and password
-func validateUser(usr User) (bool, string) {
+func validateUser(usr m.User) (bool, string) {
 	// Check the lengths
 	if len(usr.Username) < 5 || len(usr.Username) > 30 || len(usr.Password) < 10 ||
 		len(usr.Password) > 100 {

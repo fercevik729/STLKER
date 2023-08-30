@@ -2,9 +2,8 @@ package repository
 
 import (
 	"fmt"
-	"github.com/fercevik729/STLKER/control/handlers"
+	m "github.com/fercevik729/STLKER/control/models"
 	"github.com/pkg/errors"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"reflect"
 )
@@ -15,45 +14,66 @@ type PortfolioRepository struct {
 }
 
 // NewPortfolioRepository constructs a new PortfolioRepository struct and returns a pointer to it
-func NewPortfolioRepository(dsn string) (*PortfolioRepository, error) {
-	// Open connection
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-	// Init the schemas
-	err = db.AutoMigrate(&handlers.Portfolio{}, &handlers.Security{}, &handlers.User{})
-	return &PortfolioRepository{db: db}, nil
+func NewPortfolioRepository(db *gorm.DB) *PortfolioRepository {
+	return &PortfolioRepository{db: db}
 }
 
 // GetPortfolio retrieves a portfolio. Returns an error if a portfolio couldn't be found
-func (r *PortfolioRepository) GetPortfolio(portName, username string) (handlers.Portfolio, error) {
+func (r *PortfolioRepository) GetPortfolio(portName, username string) (m.Portfolio, error) {
 	// Run query
-	var res handlers.Portfolio
-	r.db.Debug().Where("name=?", portName).Where("username=?", username).First(&res)
+	var res m.Portfolio
+	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
 
 	// Check if a portfolio couldn't be found
-	if !reflect.DeepEqual(&res, &handlers.Portfolio{}) {
-		return handlers.Portfolio{}, errors.Errorf("no portfolio of name %s, belonging to user %s",
+	if !reflect.DeepEqual(&res, &m.Portfolio{}) {
+		return m.Portfolio{}, errors.Errorf("no portfolio of name %s, belonging to user %s",
 			portName, username)
 	}
 	return res, nil
 }
 
+// GetAllPortfolios retrieves all portfolios for a user
+func (r *PortfolioRepository) GetAllPortfolios(username string) []m.Portfolio {
+	var ports []m.Portfolio
+	r.db.Where("username=?", username).Preload("Securities").Find(&ports)
+	return ports
+}
+
+// GetAllPortfoliosAdmin retrieves all portfolio names for all users. Intended to be used by admin users only
+func (r *PortfolioRepository) GetAllPortfoliosAdmin() map[string][]string {
+	var (
+		usernames      []string
+		portfolioNames []string
+	)
+
+	r.db.Model(&m.User{}).Not("username=?", "admin").Select("username").Find(&usernames)
+
+	// Create a map of usernames to slices of portfolio names
+	table := make(map[string][]string)
+
+	// Create the map of usernames -> list of portfolios
+	for _, user := range usernames {
+		r.db.Table("portfolios").Where("username=?", user).Select("name").Find(&portfolioNames)
+		table[user] = portfolioNames
+	}
+
+	return table
+}
+
 // CreateNewPortfolio creates a new portfolio if a portfolio with the same name doesn't already exist for a user
-func (r *PortfolioRepository) CreateNewPortfolio(portName, username string, portfolio handlers.Portfolio) error {
+func (r *PortfolioRepository) CreateNewPortfolio(portName, username string, portfolio m.Portfolio) error {
 	// Check if portfolio is empty
-	if reflect.DeepEqual(portfolio, handlers.Portfolio{}) {
+	if reflect.DeepEqual(portfolio, m.Portfolio{}) {
 		return errors.Errorf("portfolio cannot be empty")
 	}
 
-	// Run query
-	var res handlers.Portfolio
-	r.db.Debug().Where("name=?", portName).Where("username=?", username).First(&res)
 	// Check if a portfolio already exists
+	var res m.Portfolio
+	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
 	if reflect.DeepEqual(&res, &portfolio) {
 		return errors.Errorf("a portfolio of name %s, belonging to user %s already exists", portName, username)
 	}
+	// Create the portfolio
 	r.db.Create(&portfolio)
 
 	return nil
@@ -61,14 +81,13 @@ func (r *PortfolioRepository) CreateNewPortfolio(portName, username string, port
 
 // DeletePortfolio deletes a portfolio and all its associated securities
 func (r *PortfolioRepository) DeletePortfolio(portName, username string) error {
-	// Run queries
 	var (
-		port handlers.Portfolio
-		sec  handlers.Security
+		port m.Portfolio
+		sec  m.Security
 	)
-	// Check if any results were found
+	// Check if any matching portfolios were found
 	r.db.Where("name=?", portName).Where("username=?", username).Preload("Securities").Find(&port)
-	if reflect.DeepEqual(port, &handlers.Portfolio{}) {
+	if reflect.DeepEqual(port, &m.Portfolio{}) {
 		return fmt.Errorf("no results could be found for portfolio %s and username %s", portName, username)
 	}
 	// Delete the securities and then the portfolio
@@ -80,7 +99,7 @@ func (r *PortfolioRepository) DeletePortfolio(portName, username string) error {
 
 // UpdatePortfolio updates a portfolio and all its associated securities by deleting the previous version of the
 // portfolio and creating a new version
-func (r *PortfolioRepository) UpdatePortfolio(portName, username string, portfolio handlers.Portfolio) error {
+func (r *PortfolioRepository) UpdatePortfolio(portName, username string, portfolio m.Portfolio) error {
 	// Delete the previous version of the portfolio
 	if err := r.DeletePortfolio(portName, username); err != nil {
 		return err
@@ -91,7 +110,7 @@ func (r *PortfolioRepository) UpdatePortfolio(portName, username string, portfol
 
 // GetPortfolioId retrieves the id of a portfolio
 func (r *PortfolioRepository) GetPortfolioId(portName, username string) uint {
-	var res handlers.Portfolio
+	var res m.Portfolio
 	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
 	return res.ID
 }

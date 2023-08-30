@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	r "github.com/fercevik729/STLKER/control/repository"
 	"log/slog"
 	"time"
 
@@ -12,14 +13,17 @@ import (
 
 // ControlHandler is a http.Handler
 type ControlHandler struct {
-	l      *slog.Logger
-	client pb.WatcherClient
-	cache  *cache.Cache
-	dsn    string
+	l        *slog.Logger
+	client   pb.WatcherClient
+	cache    *cache.Cache
+	portRepo *r.PortfolioRepository
+	secRepo  *r.SecurityRepository
+	userRepo *r.UserRepository
 }
 
-// NewControlHandler is a constructor
-func NewControlHandler(log *slog.Logger, wc pb.WatcherClient, rOptions *redis.Ring, dsn string) *ControlHandler {
+// NewControlHandler constructs a new ControlHandler struct
+func NewControlHandler(log *slog.Logger, wc pb.WatcherClient, rOptions *redis.Ring,
+	portRepo *r.PortfolioRepository, secRepo *r.SecurityRepository, userRepo *r.UserRepository) *ControlHandler {
 	// Check if redis options were presented
 	var c *cache.Cache
 	if rOptions != nil {
@@ -30,9 +34,11 @@ func NewControlHandler(log *slog.Logger, wc pb.WatcherClient, rOptions *redis.Ri
 		c = nil
 	}
 	return &ControlHandler{
-		l:      log,
-		client: wc,
-		cache:  c,
-		dsn:    dsn,
+		l:        log,
+		client:   wc,
+		cache:    c,
+		portRepo: portRepo,
+		secRepo:  secRepo,
+		userRepo: userRepo,
 	}
 }
