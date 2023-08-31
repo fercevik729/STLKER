@@ -16,6 +16,7 @@ type IPortfolioRepository interface {
 	DeletePortfolio(portName, username string) error
 	UpdatePortfolio(portfolio m.Portfolio) error
 	GetPortfolioId(portName, username string) uint
+	Exists(portName, username string) bool
 }
 
 // portfolioRepository is a struct used to abstract data access operations that implements the IPortfolioRepository
@@ -70,6 +71,12 @@ func (r portfolioRepository) GetAllPortfoliosAdmin() map[string][]string {
 	return table
 }
 
+func (r portfolioRepository) Exists(portName, username string) bool {
+	var res m.Portfolio
+	r.db.Where("name = ? AND username = ?", portName, username).First(&res)
+	return !reflect.DeepEqual(&res, &m.Portfolio{})
+}
+
 // CreateNewPortfolio creates a new portfolio if a portfolio with the same name doesn't already exist for a user
 func (r portfolioRepository) CreateNewPortfolio(portfolio m.Portfolio) error {
 	// Check if portfolio is empty
@@ -103,7 +110,7 @@ func (r portfolioRepository) DeletePortfolio(portName, username string) error {
 		sec  m.Security
 	)
 	// Check if any matching portfolios were found
-	r.db.Where("name=?", portName).Where("username=?", username).Preload("Securities").Find(&port)
+	r.db.Where("name = ? AND username = ?", portName, username).Preload("Securities").Find(&port)
 	if reflect.DeepEqual(port, &m.Portfolio{}) {
 		return fmt.Errorf("no results could be found for portfolio %s and username %s", portName, username)
 	}

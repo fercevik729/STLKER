@@ -3,9 +3,11 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/fercevik729/STLKER/control/data"
@@ -93,7 +95,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	if usr.Username == "admin" {
 		admin = true
 	}
-	c.l.Info("Logged in user:", usr.Username)
+	c.l.Info("Logged in user:", "username", usr.Username)
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
@@ -211,7 +213,7 @@ func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 // code depending on if it is, along with a pointer to a claim struct
 func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	var tknStr string
-	tknStr = r.Header.Get("X-Access-Token")
+	tknStr = r.Header.Get("Authorization")
 
 	// If there was no token in the header check the cookies
 	if tknStr == "" {
@@ -225,6 +227,13 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 		}
 		tknStr = cookie.Value
 	}
+
+	if !strings.HasPrefix(tknStr, "Bearer") {
+		log.Println("Token has incorrect prefix")
+		return http.StatusUnauthorized, nil
+	}
+
+	tknStr = tknStr[7:]
 
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {

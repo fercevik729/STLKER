@@ -58,16 +58,18 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	c.updatePrices(&reqPort)
 
 	// Use the repo to create the new portfolio
+	if c.portRepo.Exists(reqPort.Name, username) {
+		c.logHTTPError(w, "portfolio with same name already exists", http.StatusBadRequest)
+		return
+	}
 	err := c.portRepo.CreateNewPortfolio(reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Write to response body
 	w.WriteHeader(http.StatusCreated)
-	data.ToJSON(&ResponseMessage{
-		Msg: msg,
-	}, w)
 }
 
 // swagger:route GET /portfolios portfolios getPortfolios

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	m "github.com/fercevik729/STLKER/control/models"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -16,7 +17,11 @@ func validatePortfolio(port *m.Portfolio) (bool, string) {
 	re := regexp.MustCompile(`[a-zA-Z0-9]+`)
 	matches := re.FindAllString(port.Name, -1)
 
-	return len(matches) == 1, "Name must be alphanumeric"
+	log.Printf("In validation.go '%s'\n", port.Name)
+	if len(matches) == 1 {
+		return true, ""
+	}
+	return false, "portfolio name must be alphanumeric"
 }
 
 // validateUser validates a user's name and password

@@ -9,11 +9,11 @@ type Security struct {
 	SecurityID int `gorm:"primary_key" json:"-"`
 	// ticker of the security
 	Ticker      string  `json:"Ticker"`
-	BoughtPrice float64 `json:"Bought Price"`
-	CurrPrice   float64 `json:"Current Price"`
+	BoughtPrice float64 `json:"BoughtPrice"`
+	CurrPrice   float64 `json:"CurrentPrice"`
 	Shares      float64 `json:"Shares"`
 	Gain        float64 `json:"Gain"`
-	Change      string  `json:"Percent Change"`
+	Change      string  `json:"PercentChange"`
 	// Currency is the destination currency of the stock
 	Currency string `json:"Currency" gorm:"default:USD"`
 	// Foreign key
