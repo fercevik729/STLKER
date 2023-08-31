@@ -37,8 +37,7 @@ func (r portfolioRepository) GetPortfolio(portName, username string) (m.Portfoli
 
 	// Check if a portfolio couldn't be found
 	if !reflect.DeepEqual(&res, &m.Portfolio{}) {
-		return m.Portfolio{}, errors.Errorf("no portfolio of name %s, belonging to user %s",
-			portName, username)
+		return m.Portfolio{}, errors.New("no portfolio could be found")
 	}
 	return res, nil
 }
