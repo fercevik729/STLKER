@@ -1,16 +1,15 @@
 package handlers
 
 import (
-	"database/sql"
 	"fmt"
+	m "github.com/fercevik729/STLKER/control/models"
+	"github.com/gorilla/mux"
 	"net/http"
-	"reflect"
-	"strconv"
-	"time"
 
 	"github.com/fercevik729/STLKER/control/data"
-	"github.com/gorilla/mux"
 )
+
+// TODO: improve error handling to be more granular
 
 type Username struct{}
 
@@ -25,98 +24,11 @@ type ResponseMessage struct {
 	Msg string `json:"Message"`
 }
 
-type STLKERModel struct {
-	ID        uint         `gorm:"primaryKey" json:"-"`
-	CreatedAt time.Time    `json:"-"`
-	UpdatedAt time.Time    `json:"-"`
-	DeletedAt sql.NullTime `json:"-" gorm:"index"`
-}
-
 // swagger:parameters createPortfolio updatePortfolio
 type ReqPortfolio struct {
 	// A single portfolio
 	// in: body
-	Body Portfolio
-}
-
-// swagger:model
-type Portfolio struct {
-	STLKERModel
-	// the name of the portfolio
-	//
-	// in: string
-	// required: true
-	Name string `json:"Name"`
-	// username of the portfolio's owner
-	//
-	// in: string
-	// required: true
-	// example: MoneyLover123
-	Username string `json:"Username"`
-	// Stocks is a list of Security structures
-	//
-	// in: Security
-	// required: true
-	Securities []*Security `json:"Securities" gorm:"foreignKey:PortfolioID"`
-}
-
-// A Profits struct defines the structure for the profits of an API portfoli
-// swagger:model
-type Profits struct {
-	// portfolio name
-	//
-	// example: Retirement Account
-	Name string `json:"Portfolio Name"`
-	// original value of the portfolio
-	//
-	OriginalValue float64 `json:"Original Value"`
-	// new value of the portfolio
-	NewValue float64 `json:"Current Value"`
-	NetGain  float64 `json:"Net Gain"`
-	// change of the portfolio's value as a percentage
-	NetChange string `json:"Net Change"`
-	// list of all the securities
-	Moves []*Security `json:"Securities"`
-}
-
-func (p *Portfolio) calcProfits() (*Profits, error) {
-	original := 0.
-	newProfits := 0.
-	// Iterate over securities and calculate change and percent change
-	for _, sec := range p.Securities {
-		original += sec.BoughtPrice * sec.Shares
-		newProfits += sec.CurrPrice * sec.Shares
-	}
-
-	// Round original and new
-	var err error
-	original, err = strconv.ParseFloat(fmt.Sprintf("%.2f", original), 64)
-	if err != nil {
-		return nil, err
-	}
-
-	newProfits, err = strconv.ParseFloat(fmt.Sprintf("%.2f", newProfits), 64)
-	if err != nil {
-		return nil, err
-	}
-
-	// Compute and round change and profits
-	percChange := fmt.Sprintf("%.2f%%", (newProfits-original)/original*100)
-
-	netGain, err := strconv.ParseFloat(fmt.Sprintf("%.2f", newProfits-original), 64)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return profits
-	return &Profits{
-		Name:          p.Name,
-		OriginalValue: original,
-		NewValue:      newProfits,
-		Moves:         p.Securities,
-		NetGain:       netGain,
-		NetChange:     percChange,
-	}, nil
+	Body m.Portfolio
 }
 
 // swagger:route POST /portfolios portfolios createPortfolio
@@ -128,7 +40,7 @@ func (p *Portfolio) calcProfits() (*Profits, error) {
 //	500: errorResponse
 func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the portfolio from the request body
-	reqPort := Portfolio{}
+	reqPort := m.Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 
 	// Validate the portfolio
@@ -141,39 +53,21 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	username := retrieveUsername(r)
 	reqPort.Username = username
 
-	// Open sqlite db connection
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
-	// Migrate schema
-	db.AutoMigrate(&Portfolio{}, &Security{})
-
-	sqlPort := Portfolio{}
-	// Check if a portfolio with that name for that user already exists
-	db.Debug().Where("name=? AND username=?", reqPort.Name, username).First(&sqlPort)
-
-	// If a portfolio with that name does exist return an error
-	if !reflect.DeepEqual(&sqlPort, &Portfolio{}) {
-		c.logHTTPError(w, "A portfolio with that name already exists", http.StatusBadRequest)
-		return
-	}
-	// Retrieve prices for all stocks in the portfolio
+	// Retrieve prices for all stocks in the portfolio from the gRPC service
 	c.l.Info("Retrieving updated stock prices")
 	c.updatePrices(&reqPort)
 
-	// Create portfolio entry
-	db.Debug().Create(&reqPort)
-	msg = fmt.Sprintf("Created portfolio named %s for %s", reqPort.Name, reqPort.Username)
-	c.l.Debug(msg)
+	// Use the repo to create the new portfolio
+	err := c.portRepo.CreateNewPortfolio(reqPort)
+	if err != nil {
+		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
+	}
 
 	// Write to response body
 	w.WriteHeader(http.StatusCreated)
 	data.ToJSON(&ResponseMessage{
 		Msg: msg,
 	}, w)
-
 }
 
 // swagger:route GET /portfolios portfolios getPortfolios
@@ -186,58 +80,33 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 func (c *ControlHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	username := retrieveUsername(r)
 	isAdmin := retrieveAdmin(r)
-	var ports []Portfolio
-
-	// Open database
-	db, err := newGormDBConn(c.dsn)
-	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
-	}
 	// If the username is admin, retrieve all portfolio names and associated usernames
 	// Then return in an ordered format
 	if isAdmin {
-		var (
-			usernames      []string
-			portfolioNames []string
-		)
-		if err != nil {
-			c.logHTTPError(w, "Couldn't open user's database", http.StatusInternalServerError)
-			return
-		}
-		// Get all usernames except for admin
-		db.Model(&User{}).Not("username=?", "admin").Select("username").Find(&usernames)
-
-		// Create a map of usernames to slices of portfolio names
-		table := make(map[string][]string)
-
-		// Iterate ove all users
-		for _, user := range usernames {
-			db.Table("portfolios").Where("username=?", user).Select("name").Find(&portfolioNames)
-			table[user] = portfolioNames
-		}
 		// Return the table in json format
+		table := c.portRepo.GetAllPortfoliosAdmin()
 		data.ToJSON(table, w)
-		if err != nil {
-			c.logHTTPError(w, "Couldn't set value into cache", http.StatusInternalServerError)
-			return
-		}
+		return
 	}
-	// Otherwise retrieve all portfolio data for a user
-	db.Where("username=?", username).Preload("Securities").Find(&ports)
+	// Otherwise retrieve all the user's portfolios
+	ports := c.portRepo.GetAllPortfolios(username)
 
-	profits := make([]*Profits, 0)
+	// Calculate their total profits for each portfolio
+	profits := make([]*m.Profits, 0)
 	for i := range ports {
-		prof, err := ports[i].calcProfits()
+		prof, err := ports[i].CalcProfits()
 		if err != nil {
-			c.logHTTPError(w, fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name), http.StatusInternalServerError)
+			c.logHTTPError(
+				w,
+				fmt.Sprintf("Couldn't calculate profits for %s", ports[i].Name),
+				http.StatusInternalServerError,
+			)
 			return
 		}
 		profits = append(profits, prof)
 	}
 
 	data.ToJSON(profits, w)
-
 }
 
 // swagger:route GET /portfolios/{name} portfolios getPortfolio
@@ -252,35 +121,32 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 
-	// Open sqlite db connection
-	db, err := newGormDBConn(c.dsn)
+	// Get the portfolio from the repository
+	port, err := c.portRepo.GetPortfolio(name, username)
 	if err != nil {
-		c.logHTTPError(w, "Couldn't connect to database", http.StatusInternalServerError)
-		return
+		c.logHTTPError(
+			w,
+			fmt.Sprintf("no portfolios found with name %s, and user %s", name, username),
+			http.StatusNotFound,
+		)
 	}
-
-	var port Portfolio
-	// Check if a portfolio with that name for that user can be found
-	db.Where("name=?", name).Where("username=?", username).Preload("Securities").Find(&port)
-	// Check if any results were found
-	if port.ID == 0 {
-		c.logHTTPError(w, fmt.Sprintf("no results found with name %s, and user %s", name, username), http.StatusBadRequest)
-		return
-	}
-	// Update the database entry with the new prices
-	err = c.updateDB(&port)
+	// Update the database with the new prices from the gRPC service
+	c.updatePrices(&port)
+	err = c.portRepo.UpdatePortfolio(port)
 	if err != nil {
-		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
-		return
+		c.logHTTPError(
+			w,
+			fmt.Sprintf("couldn't update portfolio with name %s, and user %s", name, username),
+			http.StatusNotFound,
+		)
 	}
 	// Calculate the profits
-	profits, err := port.calcProfits()
+	profits, err := port.CalcProfits()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	data.ToJSON(profits, w)
-
 }
 
 // swagger:route PUT /portfolios portfolios updatePortfolio
@@ -295,18 +161,11 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	username := retrieveUsername(r)
 
 	// Retrieve the portfolio from the request body
-	reqPort := Portfolio{}
+	reqPort := m.Portfolio{}
 	data.FromJSON(&reqPort, r.Body)
 	reqPort.Username = username
 	name := reqPort.Name
-
-	// Check if request payload is empty
-	if reflect.DeepEqual(reqPort, Portfolio{}) {
-		c.logHTTPError(w, "Bad request payload", http.StatusBadRequest)
-		return
-	}
-	// Call helper method
-	err := c.replacePortfolio(name, username, &reqPort)
+	err := c.portRepo.UpdatePortfolio(reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -317,7 +176,6 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	data.ToJSON(&ResponseMessage{
 		Msg: msg,
 	}, w)
-
 }
 
 // swagger:route DELETE /portfolios/{name} portfolios deletePortfolio
@@ -331,7 +189,7 @@ func (c *ControlHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request)
 	name := mux.Vars(r)["name"]
 	username := retrieveUsername(r)
 	// Delete portfolio and all child securities
-	err := c.replacePortfolio(name, username, nil)
+	err := c.portRepo.DeletePortfolio(name, username)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return

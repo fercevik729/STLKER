@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	m "github.com/fercevik729/STLKER/control/models"
 	"net/http"
 	"strconv"
 	"sync"
@@ -33,19 +34,9 @@ func (c *ControlHandler) logHTTPError(w http.ResponseWriter, errorMsg string, er
 	http.Error(w, fmt.Sprintf("Error: %s", errorMsg), errorCode)
 }
 
-// updateDB updates the database entry for a portfolio "port" by calling updatePrices
-// and subsequently replacePortfolio
-func (c *ControlHandler) updateDB(port *Portfolio) error {
-	// Update prices using gRPC API
-	c.updatePrices(port)
-	// Delete previous portfolio and replace it with updated one
-	return c.replacePortfolio(port.Name, port.Username, port)
-
-}
-
 // updateSecurities calls the grpc microservice and updates a given
 // security with the new prices
-func (c *ControlHandler) updateSecurities(s *Security) {
+func (c *ControlHandler) updateSecurities(s *m.Security) {
 	// Get security information using Info method defined in driver.go
 	st, err := Info(s.Ticker, s.Currency, c.client)
 	if err != nil {
@@ -67,18 +58,18 @@ func (c *ControlHandler) updateSecurities(s *Security) {
 
 	// Update the individual security's gains and percent changes
 	gain, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", (s.CurrPrice-s.BoughtPrice)*s.Shares), 64)
-	s.setMoves(gain, fmt.Sprintf("%.2f%%", (s.CurrPrice-s.BoughtPrice)/s.BoughtPrice*100))
+	s.SetMoves(gain, fmt.Sprintf("%.2f%%", (s.CurrPrice-s.BoughtPrice)/s.BoughtPrice*100))
 
 }
 
 // updatePrices concurrently retrieves stock prices for all the securities
 // in the portfolio by calling updateSecurities
-func (c *ControlHandler) updatePrices(port *Portfolio) {
+func (c *ControlHandler) updatePrices(port *m.Portfolio) {
 	// Concurrently retrieve stock prices
 	wg := &sync.WaitGroup{}
 	for _, sec := range port.Securities {
 		wg.Add(1)
-		go func(s *Security) {
+		go func(s *m.Security) {
 			c.updateSecurities(s)
 			wg.Done()
 		}(sec)

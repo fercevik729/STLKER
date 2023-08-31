@@ -15,8 +15,8 @@ The user sends a HTTP request to the control API's endpoint which then forwards 
 
 ## Current endpoints
 * /portfolios (Requires authentication)
-* /portfolios/{name} (Requires authentication)
-* /portfolios/{name}/{ticker} (Requires authentication)
+* /portfolios/{portName} (Requires authentication)
+* /portfolios/{portName}/{ticker} (Requires authentication)
 * /stocks/more/{ticker}
 * /stocks/{ticker}/{currency}
 * /signup

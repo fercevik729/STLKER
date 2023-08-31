@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/fercevik729/STLKER/control/models"
 	"log"
 	"log/slog"
 	"net/http"
@@ -53,7 +54,7 @@ func loginMockUser(r *http.Request) (*http.Request, error) {
 
 	// Get token from /login end route
 	// Create request
-	mockBody := handlers.User{
+	mockBody := models.User{
 		Username: mockUser,
 		Password: mockPass,
 	}
