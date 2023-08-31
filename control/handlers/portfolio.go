@@ -131,16 +131,19 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("no portfolios found with name %s, and user %s", name, username),
 			http.StatusNotFound,
 		)
+		return
 	}
 	// Update the database with the new prices from the gRPC service
 	c.updatePrices(&port)
 	err = c.portRepo.UpdatePortfolio(port)
 	if err != nil {
+		c.l.Warn("Error updating portfolio", "err", err.Error())
 		c.logHTTPError(
 			w,
 			fmt.Sprintf("couldn't update portfolio with name %s, and user %s", name, username),
 			http.StatusNotFound,
 		)
+		return
 	}
 	// Calculate the profits
 	profits, err := port.CalcProfits()

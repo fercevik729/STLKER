@@ -34,10 +34,10 @@ func NewPortfolioRepository(db *gorm.DB) IPortfolioRepository {
 func (r portfolioRepository) GetPortfolio(portName, username string) (m.Portfolio, error) {
 	// Run query
 	var res m.Portfolio
-	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
+	r.db.Debug().Where("name=?", portName).Where("username=?", username).Preload("Securities").First(&res)
 
 	// Check if a portfolio couldn't be found
-	if !reflect.DeepEqual(&res, &m.Portfolio{}) {
+	if reflect.DeepEqual(&res, &m.Portfolio{}) {
 		return m.Portfolio{}, errors.New("no portfolio could be found")
 	}
 	return res, nil
@@ -80,7 +80,7 @@ func (r portfolioRepository) Exists(portName, username string) bool {
 // CreateNewPortfolio creates a new portfolio if a portfolio with the same name doesn't already exist for a user
 func (r portfolioRepository) CreateNewPortfolio(portfolio m.Portfolio) error {
 	// Check if portfolio is empty
-	if reflect.DeepEqual(portfolio, m.Portfolio{}) {
+	if reflect.DeepEqual(&portfolio, &m.Portfolio{}) {
 		return errors.Errorf("failed to create new portfolio")
 
 	}
@@ -94,7 +94,7 @@ func (r portfolioRepository) CreateNewPortfolio(portfolio m.Portfolio) error {
 	// Check if a portfolio already exists
 	var res m.Portfolio
 	r.db.Where("name = ? AND username = ?", portName, username).First(&res)
-	if reflect.DeepEqual(&res, &portfolio) {
+	if !reflect.DeepEqual(&res, &m.Portfolio{}) {
 		return errors.Errorf("a portfolio of name %s, belonging to user %s already exists", portName, username)
 	}
 	// Create the portfolio
@@ -111,7 +111,7 @@ func (r portfolioRepository) DeletePortfolio(portName, username string) error {
 	)
 	// Check if any matching portfolios were found
 	r.db.Where("name = ? AND username = ?", portName, username).Preload("Securities").Find(&port)
-	if reflect.DeepEqual(port, &m.Portfolio{}) {
+	if reflect.DeepEqual(&port, &m.Portfolio{}) {
 		return fmt.Errorf("no results could be found for portfolio %s and username %s", portName, username)
 	}
 	// Delete the securities and then the portfolio

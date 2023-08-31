@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 // Security defines the structure for a security
 // swagger:model
 type Security struct {
@@ -25,4 +27,8 @@ type Security struct {
 func (s *Security) SetMoves(gain float64, change string) {
 	s.Gain = gain
 	s.Change = change
+}
+
+func (s *Security) String() string {
+	return fmt.Sprintf("Security: ticker=%v, bought price=%v, curr price=%v", s.Ticker, s.BoughtPrice, s.CurrPrice)
 }
