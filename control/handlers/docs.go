@@ -45,7 +45,7 @@ type securityResponseWrapper struct {
 type stockResponseWrapper struct {
 	// A single stock
 	// in: body
-	Body Stock
+	Body m.Stock
 }
 
 // A moreStockResponse is more information about a single stock
@@ -53,7 +53,7 @@ type stockResponseWrapper struct {
 type moreStockResponseWrapper struct {
 	// A single stock
 	// in: body
-	Body MoreStock
+	Body m.MoreStock
 }
 
 // A messageResponse returns diagnostic information to the client

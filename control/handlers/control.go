@@ -16,14 +16,14 @@ type ControlHandler struct {
 	l        *slog.Logger
 	client   pb.WatcherClient
 	cache    *cache.Cache
-	portRepo *r.PortfolioRepository
-	secRepo  *r.SecurityRepository
-	userRepo *r.UserRepository
+	portRepo r.PortfolioRepository
+	secRepo  r.SecurityRepository
+	userRepo r.UserRepository
 }
 
 // NewControlHandler constructs a new ControlHandler struct
 func NewControlHandler(log *slog.Logger, wc pb.WatcherClient, rOptions *redis.Ring,
-	portRepo *r.PortfolioRepository, secRepo *r.SecurityRepository, userRepo *r.UserRepository) *ControlHandler {
+	portRepo r.PortfolioRepository, secRepo r.SecurityRepository, userRepo r.UserRepository) *ControlHandler {
 	// Check if redis options were presented
 	var c *cache.Cache
 	if rOptions != nil {

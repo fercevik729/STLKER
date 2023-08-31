@@ -5,45 +5,9 @@ import (
 	"net/http"
 
 	"github.com/fercevik729/STLKER/control/data"
+	m "github.com/fercevik729/STLKER/control/models"
 	"github.com/gorilla/mux"
 )
-
-// Stock is the struct equivalent to the body returned by the gRPC API
-// swagger:model
-type Stock struct {
-	Symbol        string
-	Open          float64
-	High          float64
-	Low           float64
-	Price         float64
-	Volume        float64
-	LTD           string
-	PrevClose     float64
-	Change        float64
-	PercentChange string
-	Destination   string
-}
-
-// MoreStock contains important financial metrics
-// swagger:model
-type MoreStock struct {
-	Ticker            string
-	Name              string
-	Exchange          string
-	Sector            string
-	MarketCap         float64
-	PERatio           float64
-	PEGRatio          float64
-	DivPerShare       float64
-	EPS               float64
-	RevPerShare       float64
-	ProfitMargin      float64
-	YearHigh          float64
-	YearLow           float64
-	SharesOutstanding float64
-	PriceToBookRatio  float64
-	Beta              float64
-}
 
 // swagger:route GET /stocks/{ticker}/{currency} stocks getInfo
 // Outputs a stock's financial details to the client in the requested currency
@@ -75,7 +39,7 @@ func (c *ControlHandler) GetInfo(w http.ResponseWriter, r *http.Request) {
 			c.l.Warn(fmt.Sprintf("Got error while setting stock cache: %s", err.Error()))
 		}
 	}
-	data.ToJSON(&Stock{
+	data.ToJSON(&m.Stock{
 		Symbol:        s.Symbol,
 		Open:          parseFloat(s.Open),
 		High:          parseFloat(s.High),
@@ -117,7 +81,7 @@ func (c *ControlHandler) MoreInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		c.l.Info("Setting cache...")
 	}
-	data.ToJSON(&MoreStock{
+	data.ToJSON(&m.MoreStock{
 		Ticker:            co.Ticker,
 		Name:              co.Name,
 		Exchange:          co.Exchange,

@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// STLKERModel is a Gorm Model to be composed in other models
 type STLKERModel struct {
 	ID        uint         `gorm:"primaryKey" json:"-"`
 	CreatedAt time.Time    `                  json:"-"`

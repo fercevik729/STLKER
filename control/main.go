@@ -32,9 +32,9 @@ import (
 
 // TODO: change localhost to names of containers when dockerizing
 var ring *redis.Ring
-var portRepo *r.PortfolioRepository
-var secRepo *r.SecurityRepository
-var userRepo *r.UserRepository
+var portRepo r.PortfolioRepository
+var secRepo r.SecurityRepository
+var userRepo r.UserRepository
 
 type PrettyHandlerOptions struct {
 	SlogOpts slog.HandlerOptions
