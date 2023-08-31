@@ -58,7 +58,7 @@ func (c *ControlHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request)
 	c.updatePrices(&reqPort)
 
 	// Use the repo to create the new portfolio
-	err := c.portRepo.CreateNewPortfolio(reqPort.Name, username, reqPort)
+	err := c.portRepo.CreateNewPortfolio(reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 	}
@@ -132,7 +132,7 @@ func (c *ControlHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 	}
 	// Update the database with the new prices from the gRPC service
 	c.updatePrices(&port)
-	err = c.portRepo.UpdatePortfolio(name, username, port)
+	err = c.portRepo.UpdatePortfolio(port)
 	if err != nil {
 		c.logHTTPError(
 			w,
@@ -165,7 +165,7 @@ func (c *ControlHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request)
 	data.FromJSON(&reqPort, r.Body)
 	reqPort.Username = username
 	name := reqPort.Name
-	err := c.portRepo.UpdatePortfolio(name, username, reqPort)
+	err := c.portRepo.UpdatePortfolio(reqPort)
 	if err != nil {
 		c.logHTTPError(w, err.Error(), http.StatusBadRequest)
 		return

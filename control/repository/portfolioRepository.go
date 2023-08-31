@@ -8,29 +8,29 @@ import (
 	"reflect"
 )
 
-type PortfolioRepository interface {
+type IPortfolioRepository interface {
 	GetPortfolio(portName, username string) (m.Portfolio, error)
 	GetAllPortfolios(username string) []m.Portfolio
 	GetAllPortfoliosAdmin() map[string][]string
-	CreateNewPortfolio(portName, username string, portfolio m.Portfolio) error
+	CreateNewPortfolio(portfolio m.Portfolio) error
 	DeletePortfolio(portName, username string) error
-	UpdatePortfolio(portName, username string, portfolio m.Portfolio) error
+	UpdatePortfolio(portfolio m.Portfolio) error
 	GetPortfolioId(portName, username string) uint
 }
 
-// portfolioRepositoryImpl is a struct used to abstract data access operations that implements the PortfolioRepository
+// portfolioRepository is a struct used to abstract data access operations that implements the IPortfolioRepository
 // interface
-type portfolioRepositoryImpl struct {
+type portfolioRepository struct {
 	db *gorm.DB
 }
 
-// NewPortfolioRepository constructs a new PortfolioRepository struct and returns a pointer to it
-func NewPortfolioRepository(db *gorm.DB) PortfolioRepository {
-	return &portfolioRepositoryImpl{db: db}
+// NewPortfolioRepository constructs a new IPortfolioRepository struct and returns a pointer to it
+func NewPortfolioRepository(db *gorm.DB) IPortfolioRepository {
+	return &portfolioRepository{db: db}
 }
 
 // GetPortfolio retrieves a portfolio. Returns an error if a portfolio couldn't be found
-func (r *portfolioRepositoryImpl) GetPortfolio(portName, username string) (m.Portfolio, error) {
+func (r portfolioRepository) GetPortfolio(portName, username string) (m.Portfolio, error) {
 	// Run query
 	var res m.Portfolio
 	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
@@ -44,14 +44,14 @@ func (r *portfolioRepositoryImpl) GetPortfolio(portName, username string) (m.Por
 }
 
 // GetAllPortfolios retrieves all portfolios for a user
-func (r *portfolioRepositoryImpl) GetAllPortfolios(username string) []m.Portfolio {
+func (r portfolioRepository) GetAllPortfolios(username string) []m.Portfolio {
 	var ports []m.Portfolio
 	r.db.Where("username=?", username).Preload("Securities").Find(&ports)
 	return ports
 }
 
 // GetAllPortfoliosAdmin retrieves all portfolio names for all users. Intended to be used by admin users only
-func (r *portfolioRepositoryImpl) GetAllPortfoliosAdmin() map[string][]string {
+func (r portfolioRepository) GetAllPortfoliosAdmin() map[string][]string {
 	var (
 		usernames      []string
 		portfolioNames []string
@@ -72,15 +72,22 @@ func (r *portfolioRepositoryImpl) GetAllPortfoliosAdmin() map[string][]string {
 }
 
 // CreateNewPortfolio creates a new portfolio if a portfolio with the same name doesn't already exist for a user
-func (r *portfolioRepositoryImpl) CreateNewPortfolio(portName, username string, portfolio m.Portfolio) error {
+func (r portfolioRepository) CreateNewPortfolio(portfolio m.Portfolio) error {
 	// Check if portfolio is empty
 	if reflect.DeepEqual(portfolio, m.Portfolio{}) {
-		return errors.Errorf("portfolio cannot be empty")
+		return errors.Errorf("failed to create new portfolio")
+
 	}
 
+	// Check if securities are empty
+	if portfolio.Securities == nil {
+		return errors.Errorf("failed to create new portfolio")
+	}
+
+	portName, username := portfolio.Name, portfolio.Username
 	// Check if a portfolio already exists
 	var res m.Portfolio
-	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
+	r.db.Where("name = ? AND username = ?", portName, username).First(&res)
 	if reflect.DeepEqual(&res, &portfolio) {
 		return errors.Errorf("a portfolio of name %s, belonging to user %s already exists", portName, username)
 	}
@@ -91,7 +98,7 @@ func (r *portfolioRepositoryImpl) CreateNewPortfolio(portName, username string, 
 }
 
 // DeletePortfolio deletes a portfolio and all its associated securities
-func (r *portfolioRepositoryImpl) DeletePortfolio(portName, username string) error {
+func (r portfolioRepository) DeletePortfolio(portName, username string) error {
 	var (
 		port m.Portfolio
 		sec  m.Security
@@ -110,17 +117,18 @@ func (r *portfolioRepositoryImpl) DeletePortfolio(portName, username string) err
 
 // UpdatePortfolio updates a portfolio and all its associated securities by deleting the previous version of the
 // portfolio and creating a new version
-func (r *portfolioRepositoryImpl) UpdatePortfolio(portName, username string, portfolio m.Portfolio) error {
+func (r portfolioRepository) UpdatePortfolio(portfolio m.Portfolio) error {
+	portName, username := portfolio.Name, portfolio.Username
 	// Delete the previous version of the portfolio
 	if err := r.DeletePortfolio(portName, username); err != nil {
 		return err
 	}
 	// Create the new version of the portfolio
-	return r.CreateNewPortfolio(portName, username, portfolio)
+	return r.CreateNewPortfolio(portfolio)
 }
 
 // GetPortfolioId retrieves the id of a portfolio
-func (r *portfolioRepositoryImpl) GetPortfolioId(portName, username string) uint {
+func (r portfolioRepository) GetPortfolioId(portName, username string) uint {
 	var res m.Portfolio
 	r.db.Where("name=?", portName).Where("username=?", username).First(&res)
 	return res.ID
