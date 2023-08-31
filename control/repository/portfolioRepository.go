@@ -34,7 +34,7 @@ func NewPortfolioRepository(db *gorm.DB) IPortfolioRepository {
 func (r portfolioRepository) GetPortfolio(portName, username string) (m.Portfolio, error) {
 	// Run query
 	var res m.Portfolio
-	r.db.Debug().Where("name=?", portName).Where("username=?", username).Preload("Securities").First(&res)
+	r.db.Where("name=?", portName).Where("username=?", username).Preload("Securities").First(&res)
 
 	// Check if a portfolio couldn't be found
 	if reflect.DeepEqual(&res, &m.Portfolio{}) {
