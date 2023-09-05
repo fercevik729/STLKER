@@ -62,7 +62,7 @@ func (c *ControlHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	// Status code to indicate successfully created user
 	w.WriteHeader(http.StatusCreated)
 	c.l.Info("Signed up user:", credentials.Username)
-	data.ToJSON(fmt.Sprintf("Happy Investing! %s", credentials.Username), w)
+	data.ToJSON(&ResponseMessage{Msg: fmt.Sprintf("Happy Investing! %s", credentials.Username)}, w)
 
 }
 
@@ -93,7 +93,7 @@ func (c *ControlHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	if usr.Username == "admin" {
 		admin = true
 	}
-	c.l.Info("Logged in user:", usr.Username)
+	c.l.Info("Logged in user:", "username", usr.Username)
 	// Set expiration time and claims
 	expTime := time.Now().Add(15 * time.Minute)
 	claims := &Claims{
@@ -204,7 +204,7 @@ func (c *ControlHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (c *ControlHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	username := retrieveUsername(r)
 	c.userRepo.DeleteUser(username)
-	c.l.Info("Deleted User", username)
+	c.l.Info("Deleted User", "username", username)
 }
 
 // ValidateJWT checks if the JWT token in the request token is valid and returns a http status
@@ -213,8 +213,8 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 	var tknStr string
 	tknStr = r.Header.Get("X-Access-Token")
 
-	// If there was no token in the header check the cookies
 	if tknStr == "" {
+		// Check cookies
 		cookie, err := r.Cookie(tokenName)
 		switch {
 		case err == nil:
@@ -226,11 +226,13 @@ func ValidateJWT(r *http.Request, tokenName string) (int, *Claims) {
 		tknStr = cookie.Value
 	}
 
+	// Parse claims
 	claims := &Claims{}
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(encryptKey), nil
 	})
 
+	// Validate claims
 	switch {
 	case err == nil:
 	case errors.Is(err, jwt.ErrSignatureInvalid):

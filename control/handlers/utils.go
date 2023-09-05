@@ -46,14 +46,14 @@ func (c *ControlHandler) updateSecurities(s *m.Security) {
 	// Parse the stock price
 	price, err := strconv.ParseFloat(st.Price, 64)
 	if err != nil {
-		c.l.Error("Couldn't parse stock price for ticker:", s.Ticker, "price:", st.Price)
+		c.l.Error("Couldn't parse stock price for:", "ticker", s.Ticker, "price", st.Price)
 		return
 	}
 	// Set stock price in target currency (USD by default)
 	if s.Currency == "" {
 		s.Currency = "USD"
 	}
-	c.l.Debug("Got price for ticker:", s.Ticker, "in", s.Currency)
+	c.l.Debug("Got price for:", "ticker", s.Ticker, "currency", s.Currency)
 	s.CurrPrice = price
 
 	// Update the individual security's gains and percent changes

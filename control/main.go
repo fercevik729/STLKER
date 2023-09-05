@@ -176,7 +176,7 @@ func main() {
 
 		err := s.ListenAndServe()
 		if err != nil {
-			l.Error("unable to start server", err)
+			l.Error("unable to start server", "error", err)
 			return
 		}
 	}()
